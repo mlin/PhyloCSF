@@ -1,0 +1,44 @@
++---------------------------------------------------------------------+
+|             ____  __          __       ___________ ______           |
+|            / __ \/ /_  __  __/ /____  / ____/ ___// ____/           |
+|           / /_/ / __ \/ / / / // __ \/ /    \__ \/ /_               |
+|          / ____/ / / / /_/ / // /_/ / /___ ___/ / __/               |
+|         /_/   /_/ /_/\__, /_/ \____/\____//____/_/                  |
+|                      /____/                                         |
+|                                                                     |
+|                 http://compbio.mit.edu/PhyloCSF                     | 
++---------------------------------------------------------------------+
+
+
+SOURCE DISTRIBUTION
+
+Compiling PhyloCSF from source will be an involved process for most
+users, because it requires an Objective Caml toolchain that's probably
+not already present on your system. For this reason, we provide
+precompiled binaries for Linux, Mac OS X and Cygwin on our website.
+
+DEPENDENCIES
+
+- GNU Scientific Library
+* Objective Caml 3.10 or higher, with native code compiler
+* findlib
+* OCaml Batteries Included
+* ocamlgsl
+- ocaml+twt http://people.csail.mit.edu/mikelin/ocaml+twt/
+
+* These can be set up using GODI: http://godi.camlcity.org/
+
+The source distribution is divided into a library, CamlPaml,
+containing generic infrastructure for phylogenetic rate models, and a
+program implementing the PhyloCSF-specific models and driver
+program. With additional development, the CamlPaml library will
+eventually be released as a separate entity, but for now it is just
+part of this distribution.
+
+COMPILING
+
+Assuming the above dependencies are satisfied:
+1. pushd CamlPaml; make install; popd
+2. pushd PhyloCSF; make; popd
+3. PhyloCSF/_build/PhyloCSF.native is the executable and can be used
+   with the parameters in PhyloCSFParameters/
