@@ -1,6 +1,6 @@
 (* Wish list:
 PHYLIP format
-performance improvement: reinstantiate model for available species only
+performance improvement: reinstantiate model for only the species provided in the alignment
 *)
 
 open Batteries_uni
@@ -20,8 +20,9 @@ let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_par
 let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
 let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)" (Opt.value_option "mle|fixed" (Some PhyloCSFModel.MaxLik) (fun s -> match String.lowercase s with "mle" -> PhyloCSFModel.MaxLik | "fixed" -> PhyloCSFModel.FixedLik | x -> invalid_arg x) (fun _ s -> sprintf "invalid strategy %s" s))
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
-let orf_mode = opt ~l:"orfs" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
+let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~l:"minCodons" ~h:"minimum number of codons for ORF search (default 10)" (StdOpt.int_option ~default:10 ())
+let allow_ref_gaps = opt ~l:"refGaps" ~h:"do not complain if the reference sequence contain gaps (be careful about reading frame)" (StdOpt.store_true ())
 let debug = opt ~l:"debug" ~h:"verbose debugging mode" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
@@ -120,9 +121,6 @@ let find_orfs ?(ofs=0) dna =
 			(hi-lo+1)/3 >= Opt.get min_codons
 	
 let candidate_regions dna rcdna =
-	if (Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs) && dna |> String.enum |> exists ((=) '-') then
-		failwith "To search multiple reading frames or ORFs, the first alignment row must be ungapped"
-
 	if Opt.get orf_mode = AsIs then
 		let hi = String.length dna - 1
 		[ [false,0,hi];
@@ -187,6 +185,11 @@ let process_alignment (nt,t,model) fn =
 		let lines = if fn = "" then IO.lines_of stdin else File.lines_of fn
 		let (species,aln) = input_mfa lines
 		let aln = Array.map (String.map u2t) aln
+		
+		(* sanity checks *)
+		if not (Opt.get allow_ref_gaps) && aln.(0) |> String.enum |> exists ((=) '-') then
+			failwith "the reference sequence (first alignment row) must be ungapped"
+		let rc_aln = Array.map Code.DNA.revcomp aln (* will check that everything is valid nucleotide or gap. *)
 
 		(* determine how the alignment rows correspond to the tree leaves *)
 		let t_species = (0 -- (T.leaves t - 1)) /@ T.label t |> fold (fun set sp -> SSet.add sp set) SSet.empty
@@ -197,7 +200,6 @@ let process_alignment (nt,t,model) fn =
 		let leaf_ord = Array.init (T.leaves t) (fun i -> try Some (SMap.find (T.label t i) which_row) with Not_found -> None)
 
 		(* generate list of candidate regions within the alignment *)
-		let rc_aln = Array.map Code.DNA.revcomp aln
 		let rgns = candidate_regions aln.(0) rc_aln.(0)
 		
 		try

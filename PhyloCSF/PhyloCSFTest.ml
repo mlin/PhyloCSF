@@ -1,5 +1,5 @@
 (* Test harness for PhyloCSF executable...feeds it simulated alignments of 5'UTR+ORF+3'UTR, to make sure we can recover the ORF. 
-_build/PhyloCSFTest.native "_build/PhyloCSF.native --frames=6 --orfs=ATGStop --strategy=fixed" ../PhyloCSFParameters/12flies
+_build/PhyloCSFTest.native "_build/PhyloCSF.native --frames=6 --orfs=ATGStop --strategy=fixed" ../PhyloCSF_Parameters/12flies
 *)
 
 open Batteries_uni
