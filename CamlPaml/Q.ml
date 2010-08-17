@@ -84,33 +84,6 @@ let weakly_memoize f =
 				y
 			
 
-(*
-let cache size f =
-	if size < 1 then invalid_arg "CamlPaml.Q.cache"
-	let tbl = Hashtbl.create 16
-	let next_t = ref min_int
-	fun x ->
-		if !next_t = max_int then failwith "CamlPaml.Q.cache: integer overflow"
-		try
-			let (_,v) = Hashtbl.find tbl x
-			Hashtbl.replace tbl x (!next_t,v)
-			incr next_t
-			v
-		with
-			| Not_found ->
-				let sz = ref (Hashtbl.length tbl)
-				while !sz >= size do
-					let (_,lru) = Hashtbl.fold (fun x' (t,_) cur -> min (t,x') cur) tbl (max_int,x)
-					Hashtbl.remove tbl lru
-					let newsz = Hashtbl.length tbl
-					assert (newsz < !sz)
-					sz := newsz
-			
-				let v = f x
-				Hashtbl.replace tbl x (!next_t,v)
-				incr next_t
-				v *)
-
 module Diag = struct
 	(* diagonalized Q = S*L*S'  *)
 	type t = {
@@ -262,6 +235,7 @@ module Diag = struct
 		let exp = Complex.exp
 		let (( * ),(-),(/)) = Complex.mul, Complex.sub, Complex.div
 		
+		(* combos 1,3 or 2 (alone) -- 1,3 matches P&S? *)
 		Gsl_matrix_complex.scale dQt_dx ct (* 1 *)
 		
 		let f = Gsl_matrix_complex.create n n
@@ -271,10 +245,6 @@ module Diag = struct
 					f.{i,j} <- exp (q.l.{i} * ct) (* * ct *) (* 2 *)
 				else
 					f.{i,j} <- (exp (q.l.{i} * ct) - exp (q.l.{j} * ct)) / ((q.l.{i} - q.l.{j}) * ct (* 3 *))
-		
-		(* working combinations: 1,3 or 2 (alone)
-			1,3 seems to match the SLR source??
-		*)
 		
 		(* ehh not being too gentle with the allocator/GC here *)
 		Gsl_matrix_complex.mul_elements f (zgemm q.s' (zgemm dQt_dx q.s))

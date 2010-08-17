@@ -12,19 +12,19 @@
 
 SOURCE DISTRIBUTION
 
-Compiling PhyloCSF from source will be an involved process for most
-users, because it requires an Objective Caml toolchain that's probably
-not already present on your system. For this reason, we provide
-precompiled binaries for Linux, Mac OS X and Cygwin on our website.
+Compiling PhyloCSF from source may be difficult for most users,
+because it requires an Objective Caml toolchain that's probably not
+already present on your system. For this reason, we provide
+precompiled binaries for Linux and Mac OS X on our website.
 
 DEPENDENCIES
 
-- GNU Scientific Library
-* Objective Caml 3.10 or higher, with native code compiler
+- GNU Scientific Library 
+* Objective Caml 3.11+, with native code compiler
 * findlib
-* OCaml Batteries Included
-* ocamlgsl
-- ocaml+twt http://people.csail.mit.edu/mikelin/ocaml+twt/
+* OCaml Batteries Included 1.20+
+* ocamlgsl 0.60+
+- ocaml+twt 0.92+ http://people.csail.mit.edu/mikelin/ocaml+twt/
 
 * These can be set up using GODI: http://godi.camlcity.org/
 
