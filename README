@@ -1,0 +1,28 @@
++---------------------------------------------------------------------+
+|             ____  __          __       ___________ ______           |
+|            / __ \/ /_  __  __/ /____  / ____/ ___// ____/           |
+|           / /_/ / __ \/ / / / // __ \/ /    \__ \/ /_               |
+|          / ____/ / / / /_/ / // /_/ / /___ ___/ / __/               |
+|         /_/   /_/ /_/\__, /_/ \____/\____//____/_/                  |
+|                      /____/                                         |
+|                                                                     |
+|                 http://compbio.mit.edu/PhyloCSF                     |
++---------------------------------------------------------------------+
+
+BINARY DISTRIBUTION
+
+Please see our web site for instructions on how to use this
+software. This distribution includes executables for 32-bit Linux,
+64-bit Linux, and 32-bit Mac OS X, as well as the parameter files
+needed to run them.
+
+PGP signatures for each executable by the maintainer (Mike Lin
+<mlin@mlin.net>) are also included, detached in *.sig files. The
+public key (D1AE42EA) can be obtained from:
+
+http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0xBA028A9FD1AE42EA
+or
+http://www.mlin.net/pgp
+
+Of course, if you're concerned enough to verify the signatures, you'd
+probably want to obtain the key some other way.
