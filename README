@@ -41,4 +41,4 @@ Assuming the above dependencies are satisfied:
 1. pushd CamlPaml; make install; popd
 2. pushd PhyloCSF; make; popd
 3. PhyloCSF/_build/PhyloCSF.native is the executable and can be used
-   with the parameters in PhyloCSFParameters/
+   with the parameters in PhyloCSF_Parameters/
