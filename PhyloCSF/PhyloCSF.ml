@@ -21,24 +21,37 @@ let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead 
 let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)" (Opt.value_option "mle|fixed" (Some PhyloCSFModel.MaxLik) (fun s -> match String.lowercase s with "mle" -> PhyloCSFModel.MaxLik | "fixed" -> PhyloCSFModel.FixedLik | x -> invalid_arg x) (fun _ s -> sprintf "invalid strategy %s" s))
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
 let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
-let min_codons = opt ~l:"minCodons" ~h:"minimum number of codons for ORF search (default 10)" (StdOpt.int_option ~default:10 ())
-let allow_ref_gaps = opt ~l:"refGaps" ~h:"do not complain if the reference sequence contain gaps (be careful about reading frame)" (StdOpt.store_true ())
-let debug = opt ~l:"debug" ~h:"verbose debugging mode" (StdOpt.store_true ())
+let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
+let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
+let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
+let remove_ref_gaps = opt ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
+let allow_ref_gaps = opt ~l:"allowRefGaps" ~h:"allow the reference sequence contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
+let debug = opt ~l:"debug" ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
 
 if List.length cmd < 1 then
 	OptParser.usage opt_parser ()
-	exit (-1) 
+	exit (-1)
 	
 let fp_params = List.hd cmd
 let fns_input = List.tl cmd
+
+if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
+	eprintf "--allowRefGaps should not be used with --orf\n"
+	OptParser.usage opt_parser ()
+	exit (-1)
+	
+if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
+	eprintf "Warning: --orf with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
+	flush stderr
 
 (******************************************************************************)
 
 let input_mfa lines =
 	try
-		let rec seq (((_,buf) :: _) as sofar) =
+		let rec seq sofar =
+			let buf = match sofar with ((_,buf) :: _) -> buf | _ -> assert false
 			if not (Enum.is_empty lines) then
 				let line = String.trim (Option.get (peek lines))
 				if String.length line = 0 then
@@ -66,13 +79,25 @@ let input_mfa lines =
 			else
 				let hdr = String.lchop line
 				let sp = String.trim (try String.left hdr (String.index hdr '|') with Not_found -> hdr)
-				seq ((sp,Buffer.create 100) :: sofar)
+				seq ((sp,Buffer.create 256) :: sofar)
 		hdr []
 	with
 		| Failure msg -> failwith ("invalid MFA alignment: " ^ msg)
 		| exn -> failwith ("invalid MFA alignment: " ^ (Printexc.to_string exn))
 
 (******************************************************************************)
+
+let maybe_remove_ref_gaps (species,aln) =
+	if Opt.get remove_ref_gaps then
+		let bufs = Array.map (fun _ -> Buffer.create 256) aln
+		let refseq = aln.(0)
+		for j = 0 to String.length refseq - 1 do
+			if refseq.[j] <> '-' then
+				for i = 0 to Array.length aln - 1 do
+					Buffer.add_char bufs.(i) aln.(i).[j]
+		species, (Array.map Buffer.contents bufs)
+	else
+		species, aln
 
 let find_orfs ?(ofs=0) dna =
 	let atg = Opt.get orf_mode = ATGStop
@@ -176,6 +201,16 @@ let pleaves ?(lo=0) ?hi t leaf_ord aln =
 
 let u2t = function 'u' -> 't' | 'U' -> 'T' | x -> x
 let fn2id fn = if fn = "" then "(STDIN)" else fn
+let translate dna =
+	let aalen = String.length dna / 3
+	let pp = String.create aalen
+	for i = 0 to aalen - 1 do
+		let codon = dna.[3*i], dna.[3*i+1], dna.[3*i+2]
+		assert (Codon.is codon)
+		let aa = Codon.translate codon
+		pp.[i] <- aa
+	pp
+	
 module SMap = Map.StringMap
 module SSet = Set.StringSet
 
@@ -183,7 +218,7 @@ let process_alignment (nt,t,model) fn =
 	try
 		(* load alignment from file *)
 		let lines = if fn = "" then IO.lines_of stdin else File.lines_of fn
-		let (species,aln) = input_mfa lines
+		let (species,aln) = maybe_remove_ref_gaps (input_mfa lines)
 		let aln = Array.map (String.map u2t) aln
 		
 		(* sanity checks *)
@@ -235,14 +270,23 @@ let process_alignment (nt,t,model) fn =
 			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
 
 			(* report best-scoring region *)
-			let (score,rc,lo,hi) = reduce max rgns_scores
-			printf "%s\tdecibans\t%.4f" (fn2id fn) score
-			if Opt.get reading_frame <> One then
-				printf "\t%d\t%d" lo hi
-			if Opt.get reading_frame = Six then
-				printf "\t%c" (if rc then '-' else '+')
-			printf "\n"
-		with	(* move on to the next alignment: convergence problems, no ORFs found, etc. *)
+			(* rgns_scores |> iter *)
+			Enum.singleton (reduce max rgns_scores) |> iter
+				fun (score,rc,lo,hi) ->
+					printf "%s\tdecibans\t%.4f" (fn2id fn) score
+					if Opt.get reading_frame <> One then
+						printf "\t%d\t%d" lo hi
+					if Opt.get reading_frame = Six then
+						printf "\t%c" (if rc then '-' else '+')
+					let refdna = String.sub (if rc then rc_aln.(0) else aln.(0)) lo (hi-lo+1)
+					if Opt.get print_dna then
+						printf "\t%s" refdna
+					if Opt.get print_aa then
+						printf "\t%s" (translate refdna)
+					printf "\n"
+		with
+			| ((Assert_failure _) as exn) -> raise exn
+			(* move on to the next alignment: convergence problems, no ORFs found, etc. *)
 			| exn -> printf "%s\tfailure\t%s\n" (fn2id fn) (Printexc.to_string exn)
 	with		(* stop everything: file not found, improperly formatted alignment, etc. *)
 		| exn ->
@@ -272,10 +316,6 @@ let load_parameters () =
 	
 let main () =
 	let parameters = load_parameters ()
-	
-	if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
-		eprintf "Warning: ORF search enabled with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
-		flush stderr
 	
 	let fns_alignments =
 		if Opt.get filenames then
