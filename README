@@ -37,8 +37,7 @@ part of this distribution.
 
 COMPILING
 
-Assuming the above dependencies are satisfied:
-1. pushd CamlPaml; make install; popd
-2. pushd PhyloCSF; make; popd
-3. PhyloCSF/_build/PhyloCSF.native is the executable and can be used
-   with the parameters in PhyloCSF_Parameters/
+Assuming the above dependencies are satisfied, just run `make` in this
+directory. This will build and install the CamlPaml library, then
+compile the PhyloCSF executable and copy it to PhyloCSF.ARCH in this
+directory, where e.g. ARCH = Linux.x86_64.
