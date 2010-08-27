@@ -25,7 +25,7 @@ let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over OR
 let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
 let remove_ref_gaps = opt ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
-let allow_ref_gaps = opt ~l:"allowRefGaps" ~h:"allow the reference sequence contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
+let allow_ref_gaps = opt ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
 let debug = opt ~l:"debug" ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
@@ -112,7 +112,7 @@ let find_orfs ?(ofs=0) dna =
 	for codon_lo = ofs to len-3 do
 		if (codon_lo-ofs) mod 3 = 0 then
 			let codon_hi = codon_lo+2
-			if (not atg && !starts = []) || (atg && is_start codon_lo) then starts := codon_lo :: !starts
+			if (not atg && !starts = [] && not (is_stop codon_lo)) || (atg && is_start codon_lo) then starts := codon_lo :: !starts
 			if codon_hi+3 < len && is_stop (codon_hi+1) then
 				!starts |> List.iter
 					fun start ->
