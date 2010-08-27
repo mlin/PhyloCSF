@@ -1,4 +1,4 @@
-PKGS = gsl,SSE2
+PKGS = gsl
 
 lib:
 	ocamlbuild -cflags -for-pack,CamlPaml CamlPaml.cma CamlPaml.cmxa \

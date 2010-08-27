@@ -87,7 +87,8 @@ let ensure_beta x =
 	ensure_alpha x
 	if not x.have_beta then
 		let k = snd (Gsl_matrix.dims x.beta)
-		let inter = Gsl_vector.create ~init:nan k
+		let inter = Gsl_vector.create k
+		let ps_colb = Gsl_vector.create k
 		for i = (T.root x.tree)-1 downto 0 do
 			let p = T.parent x.tree i
 			assert (p > i)
@@ -100,7 +101,6 @@ let ensure_beta x =
 			for a = 0 to k-1 do
 				inter.{a} <- bp.{a} *. (Gsl_blas.dot (Gsl_matrix.row ss a) xas)
 
-			let ps_colb = Gsl_vector.create k
 			for b = 0 to k-1 do
 				for a = 0 to k-1 do ps_colb.{a} <- ps.{a,b}
 				x.beta.{i,b} <- Gsl_blas.dot inter ps_colb
