@@ -50,8 +50,8 @@ let component_prior { prior = prior } i = prior.(i)
 let components { components = components } = Array.copy components
 let components_prior { prior = prior } = Array.copy prior
 
-let infer m leaves =
-	let rslts = m.components |> Array.map (fun c -> Infer.prepare c.tree c.pms c.root_prior leaves)
+let infer ?workspace m leaves =
+	let rslts = m.components |> Array.map (fun c -> Infer.prepare ?workspace c.tree c.pms c.root_prior leaves)
 	let liks = rslts |> Array.map Infer.likelihood |> Array.mapi (fun i lik -> lik *. m.prior.(i))
 	let tot_lik = Array.fold_left (+.) 0. liks
 	let posterior = liks |> Array.map (fun p -> p /. tot_lik)

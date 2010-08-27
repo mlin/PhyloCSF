@@ -40,7 +40,7 @@ val simulate : t -> (?a:(int array) -> unit -> int array)
 
 @return a tuple of the probability of the leaves (likelihood of the model), posterior distribution over the model components, and {{:Infer}intermediate values} for each model component.
 *)
-val infer : t -> Infer.leaf array -> float*(float array)*(Infer.intermediate array)
+val infer : ?workspace:Infer.workspace -> t -> Infer.leaf array -> float*(float array)*(Infer.intermediate array)
 
 
 (** {1 Symbolic parameterizations}
