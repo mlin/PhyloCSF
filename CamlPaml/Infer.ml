@@ -20,10 +20,7 @@ type intermediate = {
 let dot (v1:float array) (v2:float array) =
 	let l = Array.length v1
 	if l <> Array.length v2 then invalid_arg "dot"
-	(*SuperFast.dot v1 v2 l*)
-	let z = ref 0.
-	for i = 0 to l-1 do z := !z +. v1.(i) *. v2.(i)
-	!z
+	SSE2.dot v1 v2 l
 
 let empty = [||]
 let prepare tree pms prior leaves =

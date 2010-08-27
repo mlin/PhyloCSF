@@ -1,0 +1,4 @@
+requires = ""
+description = "SSE2-vectorized numerical operations"
+archive(byte)="SSE2.cma"
+archive(native)="SSE2.cmxa"
