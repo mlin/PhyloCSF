@@ -57,33 +57,12 @@ let infer m leaves =
 	let posterior = liks |> Array.map (fun p -> p /. tot_lik)
 	tot_lik, posterior, rslts
 
-let random_chooser ?checksum weights =
-	let n = Array.length weights
-	let cum = Array.copy weights
-	for i = 1 to n-1 do
-		cum.(i) <- cum.(i-1) +. cum.(i)
-	let z = cum.(n-1)
-	match checksum with
-		| Some (sum,tol) when abs_float (z -. sum) > tol -> invalid_arg (sprintf "random_chooser checksum |%f - %f| > %f" z sum tol)
-		| _ -> ()
-	(* binary search for i s.t. cum.(i-1) < x <= cum.(i) *)
-	let rec bs x lo hi =
-		assert (lo <= hi)
-		let mid = (lo+hi)/2
-		if x > cum.(mid) then
-			bs x (mid+1) hi
-		else if (mid = 0 || x > cum.(mid-1)) then
-			mid
-		else
-			bs x lo (mid-1)
-	fun () -> bs (Random.float z) 0 n
-
 let checksum = 1., 1e-6
 
 let simulate m =
-	let branch_choosers = m.components |> Array.map (fun {pms = pms } -> pms |> Array.map (Array.map (random_chooser ~checksum:checksum)))
-	let root_choosers = m.components |> Array.map (fun { root_prior = p } -> random_chooser ~checksum:checksum p)
-	let component_chooser = random_chooser ~checksum:checksum m.prior
+	let branch_choosers = m.components |> Array.map (fun {pms = pms } -> pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl_matrix.to_arrays pm))))
+	let root_choosers = m.components |> Array.map (fun { root_prior = p } -> Tools.random_chooser ~checksum:checksum p)
+	let component_chooser = Tools.random_chooser ~checksum:checksum m.prior
 	fun ?a () ->
 		let component = component_chooser ()
 		let t = m.components.(component).tree

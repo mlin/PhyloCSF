@@ -170,7 +170,6 @@ let pleaves ?(lo=0) ?hi t leaf_ord aln =
 	let hi = match hi with Some x -> x | None -> String.length aln.(0) - 1
 	
 	(* construct enumeration of leaf probability vectors *)
-	let marginalize = Array.make Codon.dim 1.0
 	let rec enum starting_pos =
 		let pos = ref starting_pos
 		let next () =
@@ -179,17 +178,16 @@ let pleaves ?(lo=0) ?hi t leaf_ord aln =
 				Array.init (T.leaves t)
 					fun t_row ->
 						match leaf_ord.(t_row) with
-							| None -> marginalize
+							| None -> `Marginalize
 							| Some aln_row ->
 								let n1 = aln.(aln_row).[!pos]
 								let n2 = aln.(aln_row).[!pos+1]
 								let n3 = aln.(aln_row).[!pos+2]
 								let codon = n1, n2, n3
 								if not (Codon.is codon) then
-									marginalize
+									`Marginalize
 								else
-									let ci = Codon.index codon
-									Array.init Codon.dim (fun i -> if i = ci then 1.0 else 0.0)
+									`Certain (Codon.index codon)
 			pos := !pos + 3
 			lvs
 		let count () = (hi - !pos + 1)/3

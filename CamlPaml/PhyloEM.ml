@@ -57,12 +57,12 @@ let branch_ell ?component m (_,ss) br =
 		let pibr = PM.p cs.(i) br
 
 		for k = 0 to n-1 do
-			let pibrk = pibr.(k)
+			let pibrk = Gsl_matrix.row pibr k
 			let ssibrk = ssibr.(k)
 			for l = 0 to n-1 do
 				let ssibrkl = ssibrk.(l)
 				if ssibrkl > 0. then
-					tot := !tot +. ssibrkl *. log pibrk.(l)
+					tot := !tot +. ssibrkl *. log pibrk.{l}
 
 	!tot
 		
@@ -163,11 +163,11 @@ let d_ell_dQ_dxi inst (_,ss) i =
 					for a = 0 to n-1 do
 						let ssjbra = ssjbr.(a)
 						let dPt_dxi_a = dPt_dxi.(a)
-						let pa = p.(a)
+						let pa = Gsl_matrix.row p a
 						for b = 0 to n-1 do
 							let ssjbrab = ssjbra.(b)
 							if ssjbrab > 0. then
-								tot := !tot +. ssjbrab *. dPt_dxi_a.(b) /. pa.(b)
+								tot := !tot +. ssjbrab *. dPt_dxi_a.(b) /. pa.{b}
 	!tot
 
 let d_ell_dQ_dx inst ss = Array.init (Array.length (PM.P14n.p14n inst).PM.P14n.q_domains) (d_ell_dQ_dxi inst ss)
@@ -208,11 +208,11 @@ let d_ell_dbranch inst br (_,ss) =
 				for a = 0 to n-1 do
 					let ssbria = ssbri.(a)
 					let dPt_dt_a = dPt_dt.(a)
-					let pa = p.(a)
+					let pa = Gsl_matrix.row p a
 					for b = 0 to n-1 do
 						let ssbriab = ssbria.(b)
 						if ssbriab > 0. then
-							tot := !tot +. ssbria.(b) *. dPt_dt_a.(b) /. pa.(b)
+							tot := !tot +. ssbria.(b) *. dPt_dt_a.(b) /. pa.{b}
 				!tot
 
 	Array.init np

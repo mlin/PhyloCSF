@@ -2,6 +2,12 @@
 
 type intermediate
 
+type leaf = [`Certain of int | `Distribution of float array | `Marginalize]
+
+type workspace
+
+val new_workspace : T.t -> float array -> workspace
+
 (** [prepare tree p_matrices root_prior leaves] infers ancestral states, given:
 - [tree] the phylogenetic tree
 - [p_matrices.(i)] is the substitution matrix for the branch leading TO node [i] FROM its parent.
@@ -9,7 +15,7 @@ type intermediate
 - [leaves.(i)] is the observed probability distribution over extant characters at leaf [i]. Since the extant character is usually known with certainty, the distribution usually has 1 for the appropriate entry and 0 otherwise.
 @return an abstract value from which various information about ancestral states can be extracted (see below)
 *)
-val prepare : T.t -> P.matrix array -> float array -> float array array -> intermediate
+val prepare : ?workspace:workspace -> T.t -> P.matrix array -> float array -> leaf array -> intermediate
 
 (** calculate the probability of the leaves under the substitution model *)
 val likelihood : intermediate -> float

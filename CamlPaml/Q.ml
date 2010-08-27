@@ -67,23 +67,6 @@ let zinvm m =
 		| `CM x -> x
 		| _ -> assert false
 
-let weakly_memoize f =
-	let tbl = Hashtbl.create 23
-	fun x ->
-		try
-			match Weak.get (Hashtbl.find tbl x) 0 with
-				| None -> raise Not_found
-				| Some y -> y
-		with
-			| Not_found ->
-				let y = f x
-				let box = Weak.create 1
-				Weak.set box 0 (Some y)
-				Hashtbl.replace tbl x box
-				Gc.finalise (fun _ -> Hashtbl.remove tbl x) y
-				y
-			
-
 module Diag = struct
 	(* diagonalized Q = S*L*S'  *)
 	type t = {
@@ -94,7 +77,7 @@ module Diag = struct
 		pi : Gsl_vector.vector;
 		mutable have_pi : bool;
 		
-		mutable memoized_to_Pt : (float -> float array array) option;
+		mutable memoized_to_Pt : (float -> Gsl_matrix.matrix) option;
 		
 		mutable tol : float;
 	}
@@ -199,13 +182,13 @@ module Diag = struct
 
 			sm.{i,i} <- !smii
 
-		Gsl_matrix.to_arrays sm
+		sm
 
 	let rec to_Pt q t =
 		match q.memoized_to_Pt with
 			| Some f -> f t
 			| None ->
-				q.memoized_to_Pt <- Some (weakly_memoize (real_to_Pt q))
+				q.memoized_to_Pt <- Some (Tools.weakly_memoize (real_to_Pt q))
 				to_Pt q t
 
 	let dPt_dt ~q ~t =
@@ -283,4 +266,4 @@ let irw2001 rawq =
 
 let of_P ?tol m =
 	P.validate ?tol m
-	Gsl_matrix.to_arrays (irw2001 (logm (Gsl_matrix.of_arrays m)))
+	Gsl_matrix.to_arrays (irw2001 (logm m))
