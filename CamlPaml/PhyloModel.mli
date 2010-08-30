@@ -36,7 +36,7 @@ val components_prior : t -> float array
 *)
 val simulate : t -> (?a:(int array) -> unit -> int array)
 
-(** Probabilistically infer ancestral characters based on the given configuration of extant characters (leaves). The leaves are an array of length [T.leaves (tree model)]. Each [leaves.(i)] is the probability distribution over extant characters for that leaf (species). Since the extant character is usually known with certainty, this distribution usually has 1 for the corresponding entry and 0 elsewhere.
+(** Probabilistically infer ancestral characters based on the given configuration of extant characters (leaves).
 
 @return a tuple of the probability of the leaves (likelihood of the model), posterior distribution over the model components, and {{:Infer}intermediate values} for each model component.
 *)

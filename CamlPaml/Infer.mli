@@ -2,18 +2,21 @@
 
 type intermediate
 
-type leaf = [`Certain of int | `Distribution of float array | `Marginalize]
+(** Specifying a leaf (extant) character. Usually the extant character is known with certainty; in this case, use [`Certain] with the index of the character, e.g. [`Certain (Code.Codon61.index ('A','T','G'))]. Alternatively, you can specify an arbitrary probability distribution over extant characters. Lastly, you can specify to marginalize a leaf out of the likelihood calculations entirely. *)
+type leaf = [`Certain of int | `Distribution of float array	| `Marginalize]
 
 type workspace
 
-val new_workspace : T.t -> float array -> workspace
+(** The calculations use a workspace of [((2 * T.size tree - T.leaves tree) * k)] [float]s where [k] is the alphabet size. As a performance optimization, you can create a workspace with [new_workspace tree k] and use it across multiple calls to [prepare]; otherwise it will allocate by itself. *)
+val new_workspace : T.t -> int -> workspace
 
 (** [prepare tree p_matrices root_prior leaves] infers ancestral states, given:
 - [tree] the phylogenetic tree
 - [p_matrices.(i)] is the substitution matrix for the branch leading TO node [i] FROM its parent.
 - [root_prior] the prior probability distribution over characters at the root.
-- [leaves.(i)] is the observed probability distribution over extant characters at leaf [i]. Since the extant character is usually known with certainty, the distribution usually has 1 for the appropriate entry and 0 otherwise.
-@return an abstract value from which various information about ancestral states can be extracted (see below)
+- [leaves] is an array of [leaf]s (see above), the appropriate number for the tree
+- [workspace] is an appropriately sized workspace; it will be allocated if not given.
+@return an abstract value from which various information about ancestral states can be extracted (see below). If using a shared workspace, be sure to get all the results you need before the next call to [prepare].
 *)
 val prepare : ?workspace:workspace -> T.t -> P.matrix array -> float array -> leaf array -> intermediate
 

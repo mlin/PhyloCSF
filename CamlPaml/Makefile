@@ -35,4 +35,3 @@ clean:
 
 doc:
 	ocamlbuild CamlPaml.docdir/index.html
-	

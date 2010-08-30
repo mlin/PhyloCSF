@@ -30,10 +30,9 @@ type intermediate = {
 }
 
 type workspace = Gsl_matrix.matrix
-let new_workspace tree prior =
+let new_workspace tree dim =
 	let rows = 2 * (T.size tree) - (T.leaves tree)
-	let cols = Array.length prior
-	Gsl_matrix.create rows cols
+	Gsl_matrix.create rows dim
 
 let empty = [||]
 let prepare ?workspace tree pms prior leaves =
@@ -44,7 +43,7 @@ let prepare ?workspace tree pms prior leaves =
 	if nl <> Array.length leaves then invalid_arg "CamlPaml.Infer.prepare: length(leaves) != leaves(t)"
 	if Array.length pms < n-1 then invalid_arg "CamlPaml.Infer.prepare: not enough P matrices"
 	
-	let workspace = match workspace with Some x -> x | None -> new_workspace tree prior
+	let workspace = match workspace with Some x -> x | None -> new_workspace tree k
 	let rows,cols = Gsl_matrix.dims workspace
 	if rows < (2*n-nl) || cols <> k then invalid_arg "CamlPaml.Infer.prepare: inappropriate workspace dimensions"
 	let alpha = Bigarray.Array2.sub_left workspace 0 (n-nl)
