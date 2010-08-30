@@ -8,6 +8,17 @@ lib:
 		-ocamllex "python ../my_ocamllex.py " \
 		-ocamlyacc "python ../my_ocamlyacc.py "
 
+TESTPKGS = ${PKGS},oUnit
+test:
+	ocamlbuild test.native \
+		-ocamlc "ocamlfind ocamlc -package ${TESTPKGS} -linkpkg" \
+		-ocamlopt "ocamlfind ocamlopt -package ${TESTPKGS} -linkpkg" \
+		-ocamldep "ocamlfind ocamldep -package ${TESTPKGS}" \
+		-ocamllex "python ../my_ocamllex.py " \
+		-ocamlyacc "python ../my_ocamlyacc.py "
+	_build/test.native -verbose
+
+
 install: lib
 	ocamlfind install CamlPaml META _build/CamlPaml.cmi _build/CamlPaml.cma _build/CamlPaml.cmxa _build/CamlPaml.a
 
