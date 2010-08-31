@@ -1,7 +1,4 @@
-(* Wish list:
-PHYLIP format
-performance improvement: reinstantiate model for only the species provided in the alignment
-*)
+(* Wish list: PHYLIP alignment format *)
 
 open Batteries_uni
 open OptParse
@@ -26,6 +23,7 @@ let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the
 let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
 let remove_ref_gaps = opt ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
 let allow_ref_gaps = opt ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
+let desired_species = opt ~l:"species" ~h:"hint that only this subset of species will be used in any of the alignments; this does not change the calculation mathematically, but can speed it up" (StdOpt.str_option ~metavar:"Species1,Species2,..." ())
 let debug = opt ~l:"debug" ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
@@ -228,7 +226,7 @@ let process_alignment (nt,t,model) fn =
 		let t_species = (0 -- (T.leaves t - 1)) /@ T.label t |> fold (fun set sp -> SSet.add sp set) SSet.empty
 		let aln_species = Array.fold_right SSet.add species SSet.empty
 		let wtf = SSet.diff aln_species t_species
-		if SSet.cardinal wtf > 0 then failwith ("alignment contains unknown species: " ^ (String.join " " (SSet.elements wtf)))
+		if SSet.cardinal wtf > 0 then failwith ("parameters not available for species: " ^ (String.join " " (SSet.elements wtf)))
 		let which_row = Array.fold_lefti (fun m i sp -> SMap.add sp i m) SMap.empty species
 		let leaf_ord = Array.init (T.leaves t) (fun i -> try Some (SMap.find (T.label t i) which_row) with Not_found -> None)
 
@@ -306,7 +304,17 @@ let load_parameters () =
 		failwith (sprintf "Could not find required parameter files prefixed by %s\n" fp_params)
 
 	let nt = File.with_file_in fn_tree (fun input -> NewickParser.parse NewickLexer.token (Lexing.from_input input))
-	let t = T.of_newick nt
+
+	let desired_species = if Opt.is_set desired_species then String.nsplit (Opt.get desired_species) "," |> List.fold_left (flip SSet.add) SSet.empty else SSet.empty
+	let snt =
+		if desired_species = SSet.empty then
+			nt
+		else
+			match Newick.subtree (flip SSet.mem desired_species) nt with
+				| Some snt when Newick.leaves snt > 1 -> snt
+				| _ -> failwith "specify at least two available --species"
+
+	let t = T.of_newick snt
 	let s1, pi1 = ECM.import_parameters fn_ecm_c
 	let s2, pi2 = ECM.import_parameters fn_ecm_nc
 	let model = PhyloCSFModel.make s1 pi1 s2 pi2 t
