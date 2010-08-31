@@ -4,18 +4,14 @@ lib:
 	ocamlbuild -cflags -for-pack,CamlPaml CamlPaml.cma CamlPaml.cmxa \
 		-ocamlc "ocamlfind ocamlc -package ${PKGS}" \
 		-ocamlopt "ocamlfind ocamlopt -package ${PKGS}" \
-		-ocamldep "ocamlfind ocamldep -package ${PKGS}" \
-		-ocamllex "python ../my_ocamllex.py " \
-		-ocamlyacc "python ../my_ocamlyacc.py "
+		-ocamldep "ocamlfind ocamldep -package ${PKGS}"
 
 TESTPKGS = ${PKGS},oUnit
 test:
 	ocamlbuild test.native \
 		-ocamlc "ocamlfind ocamlc -package ${TESTPKGS} -linkpkg" \
 		-ocamlopt "ocamlfind ocamlopt -package ${TESTPKGS} -linkpkg" \
-		-ocamldep "ocamlfind ocamldep -package ${TESTPKGS}" \
-		-ocamllex "python ../my_ocamllex.py " \
-		-ocamlyacc "python ../my_ocamlyacc.py "
+		-ocamldep "ocamlfind ocamldep -package ${TESTPKGS}"
 	_build/test.native -verbose
 
 
