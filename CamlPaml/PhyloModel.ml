@@ -2,94 +2,62 @@ open List
 open Printf
 let (|>) x f = f x
 
-type component = {
+type t = {
 	tree : T.t;
 	qms : Q.Diag.t array;
 	pms : P.matrix array;
-	root_prior : float array
-}
-
-type t = {
-	components : component array;
 	prior : float array
 }
 
-let make_component ?root_prior t qms =
+let make ?prior t qms =
 	let qms = if Array.length qms = 1 then Array.make (T.size t - 1) qms.(0) else Array.copy qms
-	if Array.length qms <> T.size t - 1 then invalid_arg "CamlPaml.PhyloModel.make_component"
+	if Array.length qms <> T.size t - 1 then invalid_arg "CamlPaml.PhyloModel.make"
 	for i = 0 to T.root t - 1 do
-		if T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make_component"
+		if T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make"
 	let pms = Array.init (T.size t - 1) (fun br -> Q.Diag.to_Pt qms.(br) (T.branch t br))
-	let root_prior = match root_prior with	
-		| Some pr -> pr
+	let prior = match prior with	
+		| Some pr -> Array.copy pr
 		| None ->
 			assert (snd (T.children t (T.root t)) = Array.length qms - 1)
 			let q = qms.(Array.length qms - 1)
-			if not (Q.Diag.reversible q) then invalid_arg "CamlPaml.PhyloModel.make_component"
+			if not (Q.Diag.reversible q) then invalid_arg "CamlPaml.PhyloModel.make"
 			Q.Diag.equilibrium q
-	{ tree = T.copy t; qms = qms; pms = pms; root_prior = root_prior }
+	{ tree = T.copy t; qms = qms; pms = pms; prior = prior }
 	
 let tree { tree = t } = T.copy t
 let q { qms = qms } br = qms.(br)
 let p { pms = pms } br = pms.(br) (* Array.map Array.copy pms.(br) *)
-let root_prior { root_prior = rp } = Array.copy rp
+let prior { prior = rp } = Array.copy rp
 
-let make components prior =
-	if components = [||] || Array.length components <> Array.length prior then invalid_arg "CamlPaml.PhyloModel.make"
-	let t0 = components.(0).tree
-	let n = Q.Diag.dim components.(0).qms.(0)
-	components |> Array.iter
-		fun { qms = qms; tree = t } ->
-			if T.size t0 <> T.size t then invalid_arg "CamlPaml.PhyloModel.make: incongruent trees"
-			if exists (fun q -> Q.Diag.dim q <> n) (Array.to_list qms) then invalid_arg "CamlPaml.PhyloModel.make: inconsistent rate matrix dimensionality"
-	{ components = Array.copy components; prior = Array.copy prior }
-
-let component { components = components } i = components.(i)
-let component_prior { prior = prior } i = prior.(i)
-
-let components { components = components } = Array.copy components
-let components_prior { prior = prior } = Array.copy prior
-
-let infer ?workspace m leaves =
-	let rslts = m.components |> Array.map (fun c -> Infer.prepare ?workspace c.tree c.pms c.root_prior leaves)
-	let liks = rslts |> Array.map Infer.likelihood |> Array.mapi (fun i lik -> lik *. m.prior.(i))
-	let tot_lik = Array.fold_left (+.) 0. liks
-	let posterior = liks |> Array.map (fun p -> p /. tot_lik)
-	tot_lik, posterior, rslts
+let infer ?workspace m leaves = Infer.prepare ?workspace m.tree m.pms m.prior leaves
 
 let checksum = 1., 1e-6
 
 let simulate m =
-	let branch_choosers = m.components |> Array.map (fun {pms = pms } -> pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl_matrix.to_arrays pm))))
-	let root_choosers = m.components |> Array.map (fun { root_prior = p } -> Tools.random_chooser ~checksum:checksum p)
-	let component_chooser = Tools.random_chooser ~checksum:checksum m.prior
+	let branch_choosers = m.pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl_matrix.to_arrays pm)))
+	let root_chooser = Tools.random_chooser ~checksum:checksum m.prior
 	fun ?a () ->
-		let component = component_chooser ()
-		let t = m.components.(component).tree
+		let t = m.tree
 		let a = match a with
 			| Some a -> a
 			| None -> Array.make (T.size t) (-1)
 
-		a.(T.root t) <- root_choosers.(component) ()
+		a.(T.root t) <- root_chooser ()
 		for i = T.root t - 1 downto 0 do
 			let p = a.(T.parent t i)
-			a.(i) <- branch_choosers.(component).(i).(p) ()
+			a.(i) <- branch_choosers.(i).(p) ()
 		a	
 
 module P14n = struct
 	type q_p14n = Expr.t array array
 
-	type component_p14n = {
+	type model_p14n = {
 		q_p14ns : q_p14n array;
 		q_scale_p14ns : Expr.t array;
+		q_domains : Fit.domain array;
 
 		tree_shape : T.t;
-		tree_p14n : Expr.t array
-	}
-	
-	type model_p14n = {
-		component_p14ns : component_p14n array;
-		q_domains : Fit.domain array;
+		tree_p14n : Expr.t array;
 		tree_domains : Fit.domain array
 	}
 
@@ -146,56 +114,33 @@ module P14n = struct
 						previous := (p14ns.(br),scale_p14ns.(br),q) :: !previous
 						q
 
-	let instantiate_component ?root_prior p14n q_settings tree_settings =
+	let instantiate ?prior p14n ~q_settings ~tree_settings =
 		let qms = instantiate_qs p14n.q_p14ns p14n.q_scale_p14ns q_settings
 		let tree = instantiate_tree p14n.tree_shape p14n.tree_p14n tree_settings
-		(* TODO cache to_P, although it's not clear it would help *)
-		make_component ?root_prior tree qms
-
-	let instantiate ?root_priors p14n ~q_settings ~tree_settings ~components_prior =
-		let components =
-			p14n.component_p14ns |> Array.mapi
-				fun i cp14n ->
-					let root_prior = match root_priors with
-						| Some ar -> (match ar.(i) with Some rp -> Some rp | None -> None)
-						| None -> None
-					instantiate_component ?root_prior cp14n q_settings tree_settings
-		let model = make components components_prior
-		{ p14n = { p14n with component_p14ns = Array.copy p14n.component_p14ns };
-			q_settings = Array.copy q_settings; tree_settings = Array.copy tree_settings;
-			model = model }
+		{ model = make ?prior tree qms; p14n = p14n; q_settings = Array.copy q_settings; tree_settings = Array.copy tree_settings }
 			
-	let update ?root_priors ?q_settings ?tree_settings ?components_prior inst =
-		let components =
-			inst.p14n.component_p14ns |> Array.mapi
-				fun i cp14n ->
-					let pms_changed = ref false
-					let newq = match q_settings with
-						| Some q_settings ->
-							pms_changed := true
-							instantiate_qs cp14n.q_p14ns cp14n.q_scale_p14ns q_settings
-						| None -> inst.model.components.(i).qms
-					let newtree = match tree_settings with
-						| Some tree_settings ->
-							pms_changed := true
-							instantiate_tree cp14n.tree_shape cp14n.tree_p14n tree_settings
-						| None -> inst.model.components.(i).tree
-					let root_prior = match root_priors with
-						| Some ar -> (match ar.(i) with Some rp -> Array.copy rp | None -> inst.model.components.(i).root_prior)
-						| None -> inst.model.components.(i).root_prior
-					if !pms_changed then
-						make_component ~root_prior:root_prior newtree newq
-					else
-						{ inst.model.components.(i) with root_prior = root_prior }
-		let model = { components = components;
-						prior = (match components_prior with Some pr -> pr | None -> inst.model.prior) }
-		{ inst with model = model; q_settings = (match q_settings with Some set -> Array.copy set | None -> inst.q_settings);
-			tree_settings = (match tree_settings with Some set -> Array.copy set | None -> inst.tree_settings) }
-						
+	let update ?prior ?q_settings ?tree_settings inst =
+		let pms_changed = ref false
+		let newq = match q_settings with
+			| Some q_settings ->
+				pms_changed := true
+				instantiate_qs inst.p14n.q_p14ns inst.p14n.q_scale_p14ns q_settings
+			| None -> inst.model.qms
+		let newtree = match tree_settings with
+			| Some tree_settings ->
+				pms_changed := true
+				instantiate_tree inst.p14n.tree_shape inst.p14n.tree_p14n tree_settings
+			| None -> inst.model.tree
+		let prior = match prior with
+			| Some ar -> Array.copy ar
+			| None -> inst.model.prior
+		let model = if !pms_changed then make ~prior newtree newq else { inst.model with prior = prior }
+		{ inst with model = model;
+					q_settings = (match q_settings with Some set -> Array.copy set | None -> inst.q_settings);
+					tree_settings = (match tree_settings with Some set -> Array.copy set | None -> inst.tree_settings) }
 					
-	
 	let model { model = model } = model
-	let p14n { p14n = p14n } = { p14n with component_p14ns = Array.copy p14n.component_p14ns }
+	let p14n { p14n = p14n } = p14n
 	let q_settings { q_settings = q_settings } = Array.copy q_settings
 	let tree_settings { tree_settings = tree_settings } = Array.copy tree_settings
 	

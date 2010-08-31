@@ -54,7 +54,7 @@ let alignment_column_producer model_instance =
 		if Codon.is_stop (Codon.of_index leaves.(0)) then
 			next ()
 		else
-			Array.init (T.leaves (PhyloModel.tree (PhyloModel.component m 0)))
+			Array.init (T.leaves (PhyloModel.tree m))
 				fun i ->
 					let which_codon = leaves.(i)
 					let n1,n2,n3 = Codon.of_index which_codon
@@ -63,7 +63,7 @@ let alignment_column_producer model_instance =
 	enum ()
 	
 let full_alignment_columns { PhyloCSFModel.coding_model = coding_model; noncoding_model = noncoding_model } =
-	let leaves = (T.leaves (PhyloModel.tree (PhyloModel.component (PhyloModel.P14n.model coding_model) 0)))
+	let leaves = T.leaves (PhyloModel.tree (PhyloModel.P14n.model coding_model))
 	
 	let sites5' = if Opt.get max_utr > 0 then (Opt.get min_utr) + (Random.int (Opt.get max_utr - Opt.get min_utr)) else 0
 	let sites3' = if Opt.get max_utr > 0 then (Opt.get min_utr) + (Random.int (Opt.get max_utr - Opt.get min_utr)) else 0

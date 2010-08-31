@@ -37,20 +37,15 @@ let make_p14n s tree_shape =
 	let tree_exprs = make_tree_p14n tree_shape
 	let q_exprs = make_q_p14n s
 	
-	let component_p14n = { PM.P14n.q_p14ns = [| q_exprs |]; q_scale_p14ns = [| qscale q_exprs |];
-							tree_shape = (T.copy tree_shape); tree_p14n = tree_exprs }
-	
-	{ PM.P14n.component_p14ns = [| component_p14n |];
-		q_domains = [||];
-		tree_domains = [|Fit.Pos|] }
+	{ PM.P14n.q_p14ns = [| q_exprs |]; q_scale_p14ns = [| qscale q_exprs |]; q_domains = [||];
+		tree_shape = (T.copy tree_shape); tree_p14n = tree_exprs; tree_domains = [|Fit.Pos|] }
 
 (* Instantiate a codon model *)
 let new_instance ?(tree_scale=1.) s pi tree_shape =
 	let p14n = make_p14n s tree_shape
 	let q_settings = Array.copy pi
 	let tree_settings = [| tree_scale |]
-	let root_priors = [| Some pi |]
-	PM.P14n.instantiate p14n ~root_priors:root_priors ~q_settings:q_settings ~tree_settings:tree_settings ~components_prior:[| 1. |]
+	PM.P14n.instantiate p14n ~prior:pi ~q_settings:q_settings ~tree_settings:tree_settings
 
 (* Calculate log-probability of the alignment *)
 let lpr_leaves inst leaves t =
@@ -60,7 +55,7 @@ let lpr_leaves inst leaves t =
 	let lik = ref 0.
 	leaves |> Array.iter
 		fun lvs ->
-			let lvslik,_,_ = PM.infer (PM.P14n.model inst) lvs
+			let lvslik = Infer.likelihood (PM.infer (PM.P14n.model inst) lvs)
 			lik := !lik +. log lvslik
 	!lik, inst
 	
