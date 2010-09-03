@@ -1,0 +1,5 @@
+<**/*.ml> or <**/*.mli>: ocaml, debug, pkg_gsl, for-pack(CamlPaml), pp(ocaml+twt)
+<**/NewickLexer.*>: -pp(ocaml+twt)
+<**/NewickParser.*>: -pp(ocaml+twt)
+<test.ml>: pkg_oUnit
+<test.native>: pkg_gsl, pkg_oUnit

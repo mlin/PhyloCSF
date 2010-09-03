@@ -1,4 +1,0 @@
-<**/*.ml> or <**/*.mli>: ocaml, pp(ocaml+twt), debug
-<**/NewickLexer.*>: ocaml, debug, -pp(ocaml+twt)
-<**/NewickParser.*>: ocaml, debug, -pp(ocaml+twt)
-<CamlPaml.cmxa>: ocaml, native, library, debug
