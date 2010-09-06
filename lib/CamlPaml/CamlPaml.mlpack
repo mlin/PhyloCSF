@@ -4,10 +4,10 @@ NewickLexer
 T
 P
 Q
-Infer
 Expr
 Fit
 PhyloModel
+PhyloLik
 PhyloEM
 Code
 Parsimony

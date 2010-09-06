@@ -29,7 +29,7 @@ let q { qms = qms } br = qms.(br)
 let p { pms = pms } br = pms.(br) (* Array.map Array.copy pms.(br) *)
 let prior { prior = rp } = Array.copy rp
 
-let infer ?workspace m leaves = Infer.prepare ?workspace m.tree m.pms m.prior leaves
+let prepare_lik ?workspace m leaves = PhyloLik.prepare ?workspace m.tree m.pms m.prior leaves
 
 let checksum = 1., 1e-6
 

@@ -11,12 +11,12 @@ let new_sufficient_statistics m =
 	let t0 = PM.tree m
 	Array.init (T.size t0 - 1) (fun _ -> Array.make_matrix n n 0.)
 
-let collect_sufficient_statistics m leaves ss =
-	let inter = PM.infer m leaves
-	let lik = Infer.likelihood inter
+let collect_sufficient_statistics ?workspace m leaves ss =
+	let inter = PM.prepare_lik ?workspace m leaves
+	let lik = PhyloLik.likelihood inter
 	let t = PM.tree m
 	for i = 0 to T.root t - 1 do
-		Infer.add_branch_posteriors inter i ss.(i)
+		PhyloLik.add_branch_posteriors inter i ss.(i)
 	lik
 	
 let clean_sufficient_statistics ?(tol=1e-6) ss =

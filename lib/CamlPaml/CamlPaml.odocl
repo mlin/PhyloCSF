@@ -2,10 +2,10 @@ Code
 Newick
 T
 Parsimony
-Expr
+PhyloModel
 P
 Q
-PhyloModel
+Expr
+PhyloLik
 PhyloEM
-Infer
 Fit

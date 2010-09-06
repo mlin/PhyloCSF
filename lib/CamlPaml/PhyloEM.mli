@@ -8,8 +8,8 @@ type sufficient_statistics = float array array array
 
 val new_sufficient_statistics : PhyloModel.t -> sufficient_statistics
 
-(** compute the E-step statistics for one site, given the leaves (as would be given to {{:PhyloModel}PhyloModel.infer}). Update the given [sufficient_statistics] and return the probability of the leaves under the model. This should be called for each site to collect the statistics for the whole alignment. *)
-val collect_sufficient_statistics : PhyloModel.t -> Infer.leaf array -> sufficient_statistics -> float
+(** compute the E-step statistics for one site, given the leaves (as would be given to {{:PhyloModel}PhyloModel.prepare_lik}). Update the given [sufficient_statistics] and return the probability of the leaves under the model. This should be called for each site to collect the statistics for the whole alignment. *)
+val collect_sufficient_statistics : ?workspace:PhyloLik.workspace -> PhyloModel.t -> PhyloLik.leaf array -> sufficient_statistics -> float
 
 (** any entry in the sufficient statistics less than [tol] is set to zero. useful if e.g. planning to compress the sufficient statistics for transport between compute nodes *)
 val clean_sufficient_statistics : ?tol:float -> sufficient_statistics -> unit

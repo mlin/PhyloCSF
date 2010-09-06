@@ -52,11 +52,11 @@ let lpr_leaves inst leaves t =
 	let ts = PM.P14n.tree_settings inst
 	ts.(0) <- t
 	let inst = PM.P14n.update ~tree_settings:ts inst
-	let workspace = Infer.new_workspace (PM.tree (PM.P14n.model inst)) Codon.dim
+	let workspace = PhyloLik.new_workspace (PM.tree (PM.P14n.model inst)) Codon.dim
 	let lik = ref 0.
 	leaves |> Array.iter
 		fun lvs ->
-			let lvslik = Infer.likelihood (PM.infer ~workspace:workspace (PM.P14n.model inst) lvs)
+			let lvslik = PhyloLik.likelihood (PM.prepare_lik ~workspace:workspace (PM.P14n.model inst) lvs)
 			lik := !lik +. log lvslik
 	!lik, inst
 	

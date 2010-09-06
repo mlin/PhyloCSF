@@ -18,21 +18,29 @@ let get_leaf k leaf = match leaf with
 	| `Distribution ar -> Gsl_vector.of_array ar
 	| `Marginalize -> hashcons_raw_marg k
 
+type workspace = {
+	mutable generation : int;
+	data : Gsl_matrix.matrix
+}
+
 type intermediate = {
 	tree : T.t;
 	pms : Gsl_matrix.matrix array;
 	leaves : leaf array;
-	alpha : Gsl_matrix.matrix;
+	
+	workspace : workspace;
+	my_generation : int;
+	
+	alpha : Gsl_matrix.matrix; (** actually a sub-matrix of workspace.data *)
 	mutable z : float;
 	mutable have_alpha : bool;
-	beta : Gsl_matrix.matrix;
-	mutable have_beta : bool
+	beta : Gsl_matrix.matrix;  (** actually a sub-matrix of workspace.data *)
+	mutable have_beta : bool;
 }
 
-type workspace = Gsl_matrix.matrix
 let new_workspace tree dim =
 	let rows = 2 * (T.size tree) - (T.leaves tree)
-	Gsl_matrix.create rows dim
+	{ generation = min_int; data = Gsl_matrix.create rows dim }
 
 let empty = [||]
 let prepare ?workspace tree pms prior leaves =
@@ -44,14 +52,17 @@ let prepare ?workspace tree pms prior leaves =
 	if Array.length pms < n-1 then invalid_arg "CamlPaml.Infer.prepare: not enough P matrices"
 	
 	let workspace = match workspace with Some x -> x | None -> new_workspace tree k
-	let rows,cols = Gsl_matrix.dims workspace
+	workspace.generation <- (if workspace.generation = max_int then min_int else workspace.generation+1)
+	
+	let rows,cols = Gsl_matrix.dims workspace.data
 	if rows < (2*n-nl) || cols <> k then invalid_arg "CamlPaml.Infer.prepare: inappropriate workspace dimensions"
-	let alpha = Bigarray.Array2.sub_left workspace 0 (n-nl)
-	let beta = Bigarray.Array2.sub_left workspace (n-nl) n
+	let alpha = Bigarray.Array2.sub_left workspace.data 0 (n-nl)
+	let beta = Bigarray.Array2.sub_left workspace.data (n-nl) n
 	
 	for a = 0 to k-1 do beta.{n-1,a} <- prior.(a)
 	
-	{ tree = tree; pms = pms; leaves = leaves; alpha = alpha; z = nan; have_alpha = false; beta = beta; have_beta = false }
+	{ tree = tree; pms = pms; leaves = leaves; workspace = workspace; my_generation = workspace.generation;
+		alpha = alpha; z = nan; have_alpha = false; beta = beta; have_beta = false }
 
 (* Inside algo (aka Felsenstein algo.) *)
 let alpha_get x br =
@@ -106,10 +117,12 @@ let ensure_beta x =
 		x.have_beta <- true
 		
 let likelihood x =
+	if x.workspace.generation <> x.my_generation then failwith "CamlPaml.PhyloLik.likelihood: invalidated workspace"
 	ensure_alpha x
 	x.z
 
 let node_posterior inferred i =
+	if inferred.workspace.generation <> inferred.my_generation then failwith "CamlPaml.PhyloLik.node_posterior: invalidated workspace"
 	ensure_beta inferred
 	let k = snd (Gsl_matrix.dims inferred.alpha)
 	if inferred.z = 0. then
@@ -123,6 +136,7 @@ let node_posterior inferred i =
 			Array.init k (fun x -> (alpha_get inferred i).{x} *. inferred.beta.{i,x} /. inferred.z)
 
 let add_branch_posteriors ?(weight=1.0) inferred branch ecounts =
+	if inferred.workspace.generation <> inferred.my_generation then failwith "CamlPaml.PhyloLik.add_branch_posterior: invalidated workspace"
 	ensure_beta inferred
 	let k = snd (Gsl_matrix.dims inferred.alpha)
 	

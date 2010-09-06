@@ -25,13 +25,13 @@ val prior : t -> float array
 *)
 val simulate : t -> (?a:(int array) -> unit -> int array)
 
-(** Probabilistically infer ancestral characters based on the given configuration of extant characters (leaves).
+(** Prepare likelihood calculations for the given configuration of extant characters (leaves).
 
-@param workspace (optional) a preallocated workspace for [Infer.prepare]
+@param workspace (optional) a preallocated workspace for {{:PhyloLik}PhyloLik.prepare}
 
-@return  {{:Infer}intermediate values}, from which additional information can be extracted.
+@return  {{:PhyloLik}PhyloLik.intermediate} values, from which additional information can be extracted.
 *)
-val infer : ?workspace:Infer.workspace -> t -> Infer.leaf array -> Infer.intermediate
+val prepare_lik : ?workspace:PhyloLik.workspace -> t -> PhyloLik.leaf array -> PhyloLik.intermediate
 
 
 (** {1 Symbolic parameterizations}
