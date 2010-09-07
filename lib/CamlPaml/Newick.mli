@@ -2,10 +2,9 @@
 
 The Newick format is a parenthesis notation widely used for sharing phylogenetic trees, which can be used to represent rooted and unrooted trees with multifurcating nodes. The recursive data structure here is good for import/export and manipulating the tree topology, but the array-based representation in {{:T}[T]} is much more convenient for probabilistic inference purposes (though restricted to bifurcating trees).
 
-Typical usage of the included parser:
+A lexer/parser is of course included, typically used as follows:
 
 [let newick_tree = CamlPaml.NewickParser.parse CamlPaml.NewickLexer.token (Lexing.from_string str)]
-
 
 @see <http://evolution.genetics.washington.edu/phylip/newicktree.html> information about Newick format
 *)

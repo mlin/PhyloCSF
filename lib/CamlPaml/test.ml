@@ -29,8 +29,8 @@ module TestInfer = struct
 					(sm0.{1,0} * a0.(0) + sm0.{1,1} * a0.(1)) * (sm1.{1,0} * a3.(0) + sm1.{1,1} * a3.(1)) |]
 		let z = prior.(0) * a4.(0) + prior.(1) * a4.(1)
 		
-		let inter = Infer.prepare t sms prior (Array.map (fun x -> `Certain x) lvs)
-		assert_equal ~cmp:(cmp_float ~epsilon:0.001) ~printer:fs ~msg:"likelihood" z (Infer.likelihood inter)
+		let inter = PhyloLik.prepare t sms prior (Array.map (fun x -> `Certain x) lvs)
+		assert_equal ~cmp:(cmp_float ~epsilon:0.001) ~printer:fs ~msg:"likelihood" z (PhyloLik.likelihood inter)
 		
 		let b4 = prior
 		let b3 = [| (b4.(0) * sm0.{0,0} * a0.(0) + b4.(0) * sm0.{0,1} * a0.(1)) * sm1.{0,0} +
@@ -39,21 +39,53 @@ module TestInfer = struct
 						(b4.(1) * sm0.{1,0} * a0.(0) + b4.(1) * sm0.{1,1} * a0.(1)) * sm1.{1,1}
 					 |]
 		
-		assert_equal_vector ~msg:"posterior(root)" ~epsilon:0.001 [| b4.(0) * a4.(0) / z; b4.(1) * a4.(1) / z |] (Infer.node_posterior inter 4)
-		assert_equal_vector ~msg:"posterior(internal)" ~epsilon:0.001 [| b3.(0) * a3.(0) / z; b3.(1) * a3.(1) / z |] (Infer.node_posterior inter 3)
+		assert_equal_vector ~msg:"posterior(root)" ~epsilon:0.001 [| b4.(0) * a4.(0) / z; b4.(1) * a4.(1) / z |] (PhyloLik.node_posterior inter 4)
+		assert_equal_vector ~msg:"posterior(internal)" ~epsilon:0.001 [| b3.(0) * a3.(0) / z; b3.(1) * a3.(1) / z |] (PhyloLik.node_posterior inter 3)
 		
 		
-	let tests = "Infer" >::: [	"000" >:: case [| 0; 0; 0 |];
-								"001" >:: case [| 0; 0; 1 |];
-								"010" >:: case [| 0; 1; 0 |];
-								"011" >:: case [| 0; 1; 1 |];
-								"100" >:: case [| 1; 0; 0 |];
-								"101" >:: case [| 1; 0; 1 |];
-								"110" >:: case [| 1; 1; 0 |];
-								"111" >:: case [| 1; 1; 1 |];
+	let tests = "PhyloLik" >::: [	"000" >:: case [| 0; 0; 0 |];
+									"001" >:: case [| 0; 0; 1 |];
+									"010" >:: case [| 0; 1; 0 |];
+									"011" >:: case [| 0; 1; 1 |];
+									"100" >:: case [| 1; 0; 0 |];
+									"101" >:: case [| 1; 0; 1 |];
+									"110" >:: case [| 1; 1; 0 |];
+									"111" >:: case [| 1; 1; 1 |];
 								]
-		
 
-let all_tests = TestList [TestInfer.tests]
+module BeagleTests = struct
+	(* ports of examples found in the BEAGLE source: http://code.google.com/p/beagle-lib/source/browse/ *)
+	
+	module TinyTest = struct
+		let human = "AGAAATATGTCTGATAAAAGAGTTACTTTGATAGAGTAAATAATAGGAGCTTAAACCCCCTTATTTCTACTAGGACTATGAGAATCGAACCCATCCCTGAGAATCCAAAATTCTCCGTGCCACCTATCACACCCCATCCTAAGTAAGGTCAGCTAAATAAGCTATCGGGCCCATACCCCGAAAATGTTGGTTATACCCTTCCCGTACTAAGAAATTTAGGTTAAATACAGACCAAGAGCCTTCAAAGCCCTCAGTAAGTTG-CAATACTTAATTTCTGTAAGGACTGCAAAACCCCACTCTGCATCAACTGAACGCAAATCAGCCACTTTAATTAAGCTAAGCCCTTCTAGACCAATGGGACTTAAACCCACAAACACTTAGTTAACAGCTAAGCACCCTAATCAAC-TGGCTTCAATCTAAAGCCCCGGCAGG-TTTGAAGCTGCTTCTTCGAATTTGCAATTCAATATGAAAA-TCACCTCGGAGCTTGGTAAAAAGAGGCCTAACCCCTGTCTTTAGATTTACAGTCCAATGCTTCA-CTCAGCCATTTTACCACAAAAAAGGAAGGAATCGAACCCCCCAAAGCTGGTTTCAAGCCAACCCCATGGCCTCCATGACTTTTTCAAAAGGTATTAGAAAAACCATTTCATAACTTTGTCAAAGTTAAATTATAGGCT-AAATCCTATATATCTTA-CACTGTAAAGCTAACTTAGCATTAACCTTTTAAGTTAAAGATTAAGAGAACCAACACCTCTTTACAGTGA"
+		let chimp = "AGAAATATGTCTGATAAAAGAATTACTTTGATAGAGTAAATAATAGGAGTTCAAATCCCCTTATTTCTACTAGGACTATAAGAATCGAACTCATCCCTGAGAATCCAAAATTCTCCGTGCCACCTATCACACCCCATCCTAAGTAAGGTCAGCTAAATAAGCTATCGGGCCCATACCCCGAAAATGTTGGTTACACCCTTCCCGTACTAAGAAATTTAGGTTAAGCACAGACCAAGAGCCTTCAAAGCCCTCAGCAAGTTA-CAATACTTAATTTCTGTAAGGACTGCAAAACCCCACTCTGCATCAACTGAACGCAAATCAGCCACTTTAATTAAGCTAAGCCCTTCTAGATTAATGGGACTTAAACCCACAAACATTTAGTTAACAGCTAAACACCCTAATCAAC-TGGCTTCAATCTAAAGCCCCGGCAGG-TTTGAAGCTGCTTCTTCGAATTTGCAATTCAATATGAAAA-TCACCTCAGAGCTTGGTAAAAAGAGGCTTAACCCCTGTCTTTAGATTTACAGTCCAATGCTTCA-CTCAGCCATTTTACCACAAAAAAGGAAGGAATCGAACCCCCTAAAGCTGGTTTCAAGCCAACCCCATGACCTCCATGACTTTTTCAAAAGATATTAGAAAAACTATTTCATAACTTTGTCAAAGTTAAATTACAGGTT-AACCCCCGTATATCTTA-CACTGTAAAGCTAACCTAGCATTAACCTTTTAAGTTAAAGATTAAGAGGACCGACACCTCTTTACAGTGA"
+		let gorilla = "AGAAATATGTCTGATAAAAGAGTTACTTTGATAGAGTAAATAATAGAGGTTTAAACCCCCTTATTTCTACTAGGACTATGAGAATTGAACCCATCCCTGAGAATCCAAAATTCTCCGTGCCACCTGTCACACCCCATCCTAAGTAAGGTCAGCTAAATAAGCTATCGGGCCCATACCCCGAAAATGTTGGTCACATCCTTCCCGTACTAAGAAATTTAGGTTAAACATAGACCAAGAGCCTTCAAAGCCCTTAGTAAGTTA-CAACACTTAATTTCTGTAAGGACTGCAAAACCCTACTCTGCATCAACTGAACGCAAATCAGCCACTTTAATTAAGCTAAGCCCTTCTAGATCAATGGGACTCAAACCCACAAACATTTAGTTAACAGCTAAACACCCTAGTCAAC-TGGCTTCAATCTAAAGCCCCGGCAGG-TTTGAAGCTGCTTCTTCGAATTTGCAATTCAATATGAAAT-TCACCTCGGAGCTTGGTAAAAAGAGGCCCAGCCTCTGTCTTTAGATTTACAGTCCAATGCCTTA-CTCAGCCATTTTACCACAAAAAAGGAAGGAATCGAACCCCCCAAAGCTGGTTTCAAGCCAACCCCATGACCTTCATGACTTTTTCAAAAGATATTAGAAAAACTATTTCATAACTTTGTCAAGGTTAAATTACGGGTT-AAACCCCGTATATCTTA-CACTGTAAAGCTAACCTAGCGTTAACCTTTTAAGTTAAAGATTAAGAGTATCGGCACCTCTTTGCAGTGA"
+		let t = T.of_newick (NewickParser.parse NewickLexer.token (Lexing.from_string "((human:0.1,chimp:0.1):0.1,gorilla:0.2);"))
+		let q =
+			Q.Diag.scale
+				Q.Diag.of_Q [|	[| (-3.); 1.; 1.; 1.; |];
+								[| 1.; (-3.); 1.; 1.; |];
+								[| 1.; 1.; (-3.); 1.; |];
+								[| 1.; 1.; 1.; (-3.); |] |]
+				(1. /. 3.)
+
+		let qdiagtests = "Q.Diag" >::: [TestCase (fun () -> assert_bool "Q.Diag.reversible" (Q.Diag.reversible q));
+										TestCase (fun () -> assert_equal_vector ~msg:"Q.Diag.equilibrium" (Q.Diag.equilibrium q) [| 0.25; 0.25; 0.25; 0.25 |])]
+										
+		let likelihood =
+			TestCase
+				fun () ->
+					let m = PhyloModel.make t [| q |]
+					let ll = ref 0.
+					for i = 0 to String.length human - 1 do
+						let lf = Array.map (fun ch -> if Code.DNA.is ch then `Certain (Code.DNA.index ch) else `Marginalize) [| human.[i]; chimp.[i]; gorilla.[i] |]
+						ll := !ll +. log (PhyloLik.likelihood (PhyloModel.prepare_lik m lf))
+					assert_equal ~cmp:(cmp_float ~epsilon:0.001) ~printer:string_of_float ~msg:"mismatch" (-1574.63623) !ll
+					
+		let tests = "TinyTest" >::: [ qdiagtests; "likelihood" >: likelihood ]
+
+	let tests = "BeagleTest" >::: [ TinyTest.tests ]
+
+let all_tests = TestList [TestInfer.tests; BeagleTests.tests]
 
 ignore (run_test_tt_main all_tests)

@@ -18,8 +18,7 @@ let make ?prior t qms =
 	let prior = match prior with	
 		| Some pr -> Array.copy pr
 		| None ->
-			assert (snd (T.children t (T.root t)) = Array.length qms - 1)
-			let q = qms.(Array.length qms - 1)
+			let q = qms.(snd (T.children t (T.root t)))
 			if not (Q.Diag.reversible q) then invalid_arg "CamlPaml.PhyloModel.make"
 			Q.Diag.equilibrium q
 	{ tree = T.copy t; qms = qms; pms = pms; prior = prior }
