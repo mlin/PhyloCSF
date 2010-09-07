@@ -18,11 +18,42 @@ needed to run them.
 
 PGP signatures for each executable by the maintainer (Mike Lin
 <mlin@mlin.net>) are also included, detached in *.sig files. The
-public key (D1AE42EA) can be obtained from:
+public key (D1AE42EA) is copied below and can be obtained from:
 
 http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0xBA028A9FD1AE42EA
 or
 http://www.mlin.net/pgp
 
-Of course, if you're concerned enough to verify the signatures, you'd
-probably want to obtain the key some other way.
+Of course, from a security standpoint you may wish to authenticate
+this key in other ways.
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1.4.10 (Darwin)
+
+mQENBExp1a0BCADgyA3yaZiYr+Qt4QWgf6OWeEoJE3brXI+o/zoEVD1cDtqGR+aV
+jSq90OJkOiHDDOUIX604+55ajLqhtAjP0dCH4Eg6ov4+gwe+mgmvL1RuJq3z+umS
+6xFivFPMHADmI2DA64eko7EzoFHuC5NOTg2sU+elGmAvAD5VfBmmZvPxaI0zhroE
+rfx1AsyQqMdz5QSEMEsyd280JB6ySLfCk+f80gbeOng4n8pnx3drJ4YAnmUFRqY7
+IcLAZd02AM0zS8tia0Mdc3mw+B4eTugnqRtkdfEk8z806Y3H8oIURglDUbdjPQo9
+oINBfUnbqmqsI2u4/+YP7jdZDP/lMak+qQ4xABEBAAG0GE1pa2UgTGluIDxtbGlu
+QG1saW4ubmV0PokBOAQTAQIAIgUCTGnVrQIbAwYLCQgHAwIGFQgCCQoLBBYCAwEC
+HgECF4AACgkQugKKn9GuQupMFgf+K7uedNzD8GAdd3MbFjOAoyKbHT5rxt/e0F7F
+o+rLirQG/cbJRggrh0yajdekPLGZJknW4XBjXQp9v7uQH8xyYg8tx5RbVChkrqS3
+H6tbTo4LS0tzuCjXmiHyfHAgOLxAVdMB7TIzu7bQbSnwkgEX9vEdIUkyPs36TE4a
+r+9cFduNRRZtwe2toeH5lUSvyJLfeRDEYWRuvd/T+2L1BtmxOWDR0KzWvvPIbSl+
+oQHgc3phyjql9J4GmqXa3h0uIJ7yOrHbWIAcivSxnN18oyr/nQPple9+pXtRY78G
+aav6Y0W6qJD9oMZtel48qLU4MjVB8syFjM3dOMTmAY9mP17q+rkBDQRMadWtAQgA
+4CF6kyGTMoU9wFLlhAe8CzNLRCwbdWTh9nTWb+marLVgBT2icLjgMriRzY69gd1k
+gIf/PDUMrXYIh4rTHhR33VJpajSbIAPh0FSk3gpg/v0YbcXXrn3eE12HNfwwp1oc
+Qu+8GvUwfqcaMYfy4AQKWY/ksgSpe9O0a4pTLsKY4uYi57DPvHH3gUuDFy0Uh3HI
+8OYZ8GzB02GrbEt7YGNSuIXy1fwnS2o7EuFW3eLD+P+3dluIHHyWaEvddyHoXNWd
+jepV3kbhm/NjuQK4rGd2fIY3FAtLOfGY2yqh4Hwp67GTN4xHn8e2B8+gFuItmmQe
+hl+fMF5rz9kOvh9HCcN/FwARAQABiQEfBBgBAgAJBQJMadWtAhsMAAoJELoCip/R
+rkLquAYIAI4iTi02Smz0ec/6SGbuOFAUYZ4f+PEICS/Y4j00mOzmhwZdASx1im2M
+4ZmZ6EORaa66ze21TRNYpiRXaa+3fm/SuAOQpa/S/ckT7ImqssryEVgtNtw0FNY2
+EsyEh7XcdScXx4CBPWZWuigYfZoAzX+pm37xd4QUo5SaOrg7fPv+YRVGKo5TLSmj
+ZTSe5XYabWg9Mb7gj1AoEw5dwkqC2CxI9C+wfriFNDkel2x2KflX2hSmRgulmZLI
+z1M3AS2HU7vTIePK/luVNDTZssU+0DvLVDYM2qIfjEegGZZvf/w/WN3OTZKAk9XK
+124SY9l4l2WrYYRvMMFpY5oDnfEu9Lw=
+=Lm65
+-----END PGP PUBLIC KEY BLOCK-----
