@@ -2,7 +2,7 @@ all: PhyloCSF
 
 .PHONY: PhyloCSF CamlPaml clean
 
-ARCH := `uname`.`uname -p`
+ARCH := `uname`.`uname -m`
 export ARCH
 
 PhyloCSF: CamlPaml
