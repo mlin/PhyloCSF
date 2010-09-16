@@ -9,7 +9,7 @@ esac
 EXE="$PHYLOCSF_BASE/bin/PhyloCSF.$ARCH"
 if [ -f $EXE ]
 then
-  export CAMOMILE_BASE="$PHYLOCSF_BASE/share/camomile"
+  export CAMOMILE_DIR="$PHYLOCSF_BASE/share/camomile"
   chmod u+x $EXE
   $EXE $@
 else
