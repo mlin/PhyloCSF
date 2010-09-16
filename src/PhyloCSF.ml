@@ -7,20 +7,11 @@ open CamlPaml
 
 Gsl_error.init ()
 
-try
-	let base = Sys.getenv "PHYLOCSF_BASE"
-	if not (Sys.file_exists base && Sys.is_directory base) then
-		raise Not_found
-with
-	| _ -> 
-		eprintf "error: PHYLOCSF_BASE environment variable must be set to the root directory of the source or executable distribution.\n"
-		exit (-1)
-
 module Codon = CamlPaml.Code.Codon64
 type reading_frame = One | Three | Six
 type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
 
-let opt_parser = OptParser.make ~usage:"%prog /path/to/parameters [file1 file2 ...]\ninput will be read from stdin if no filenames are given." ()
+let opt_parser = OptParser.make ~usage:"%prog parameter_set [file1 file2 ...]\ninput will be read from stdin if no filenames are given." ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
 let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
@@ -313,12 +304,28 @@ let process_alignment (nt,t,model) fn =
 (******************************************************************************)
 
 let load_parameters () =
-	let paramdir = Filename.concat (Sys.getenv "PHYLOCSF_BASE") "PhyloCSF_Parameters"
-	let fn_tree = Filename.concat paramdir (paramset ^ ".nh")
-	let fn_ecm_c = Filename.concat paramdir (paramset ^ "_coding.ECM")
-	let fn_ecm_nc = Filename.concat paramdir (paramset ^ "_noncoding.ECM")
-	if not (List.for_all Sys.file_exists [fn_tree; fn_ecm_c; fn_ecm_nc]) then
-		failwith (sprintf "Could not find required parameter files prefixed by %s in %s\n" paramset paramdir)
+	let paramfile suffix =
+		if (try ignore (String.index paramset '/'); false with Not_found -> true) then
+			try
+				let base = Sys.getenv "PHYLOCSF_BASE"
+				if not (Sys.file_exists base && Sys.is_directory base) then
+					raise Not_found
+				Filename.concat (Filename.concat base "PhyloCSF_Parameters") (paramset ^ suffix)
+			with
+				| _ -> failwith "PHYLOCSF_BASE environment variable must be set to the root directory of the source or executable distribution"
+		else
+			(* paramset is a relative or absolute path *)
+			paramset ^ suffix
+	
+	let fn_tree = paramfile ".nh"
+	let fn_ecm_c = paramfile "_coding.ECM"
+	let fn_ecm_nc = paramfile "_noncoding.ECM"	
+	
+	List.iter
+		fun fn ->
+			if not (Sys.file_exists fn) then
+				failwith (sprintf "could not find required parameter file %s" fn)
+		[fn_tree; fn_ecm_c; fn_ecm_nc]
 
 	let nt = File.with_file_in fn_tree (fun input -> NewickParser.parse NewickLexer.token (Lexing.from_input input))
 
