@@ -3,13 +3,13 @@
 ARCH=`uname`.`uname -m`
 case $0 in
  ./*) export PHYLOCSF_BASE=`pwd` ;;
-  * ) export PHYLOCSF_BASE=dirname $0
+  * ) export PHYLOCSF_BASE=`dirname $0`
 esac
 
-EXE=$PHYLOCSF_BASE/bin/PhyloCSF.$ARCH
+EXE="$PHYLOCSF_BASE/bin/PhyloCSF.$ARCH"
 if [ -f $EXE ]
 then
-  export CAMOMILE_BASE=$PHYLOCSF_BASE/share/camomile
+  export CAMOMILE_BASE="$PHYLOCSF_BASE/share/camomile"
   chmod u+x $EXE
   $EXE $@
 else
