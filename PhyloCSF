@@ -1,0 +1,10 @@
+#!/bin/bash
+
+ARCH=`uname`.`uname -m`
+case $0 in
+ ./*) export PHYLOCSF_BASE=`pwd` ;;
+  * ) export PHYLOCSF_BASE=dirname $0
+esac
+
+export CAMOMILE_BASE=$PHYLOCSF_BASE/share/camomile
+$PHYLOCSF_BASE/PhyloCSF.$ARCH
