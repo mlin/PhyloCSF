@@ -9,7 +9,7 @@ Gsl_error.init ()
 
 module Codon = CamlPaml.Code.Codon64
 type reading_frame = One | Three | Six
-type orf_mode = AsIs | ATGStop | StopStop | StopStop3
+type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
 
 let opt_parser = OptParser.make ~usage:"%prog /path/to/parameters [file1 file2 ...]\ninput will be read from stdin if no filenames are given." ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
@@ -17,7 +17,7 @@ let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_par
 let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
 let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)" (Opt.value_option "mle|fixed" (Some PhyloCSFModel.MaxLik) (fun s -> match String.lowercase s with "mle" -> PhyloCSFModel.MaxLik | "fixed" -> PhyloCSFModel.FixedLik | x -> invalid_arg x) (fun _ s -> sprintf "invalid strategy %s" s))
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
-let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
+let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
 let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
@@ -43,6 +43,8 @@ if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
 if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
 	eprintf "Warning: --orf with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
 	flush stderr
+
+if Opt.get debug then Printexc.record_backtrace true
 
 (******************************************************************************)
 
@@ -136,7 +138,10 @@ let find_orfs ?(ofs=0) dna =
 					if lo3 > lo2 && lo3 > lo then suborfs := (lo3,hi) :: !suborfs
 					!suborfs
 		orfs := List.flatten all_suborfs
-			
+	
+	if Opt.get orf_mode = ToFirstStop && !orfs <> [] then
+		orfs := [List.hd (List.rev !orfs)]
+	
 	!orfs |> List.rev |> List.enum |> filter
 		fun (lo,hi) ->
 			assert ((hi-lo+1) mod 3 = 0)
@@ -202,9 +207,11 @@ let translate dna =
 	let pp = String.create aalen
 	for i = 0 to aalen - 1 do
 		let codon = dna.[3*i], dna.[3*i+1], dna.[3*i+2]
-		assert (Codon.is codon)
-		let aa = Codon.translate codon
-		pp.[i] <- aa
+		if Codon.is codon then
+			let aa = Codon.translate codon
+			pp.[i] <- aa
+		else
+			pp.[i] <- '?'
 	pp
 	
 module SMap = Map.StringMap
@@ -270,7 +277,7 @@ let process_alignment (nt,t,model) fn =
 			Enum.singleton (reduce max rgns_scores) |> iter
 				fun (score,rc,lo,hi) ->
 					printf "%s\tdecibans\t%.4f" (fn2id fn) score
-					if Opt.get reading_frame <> One then
+					if Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs then
 						printf "\t%d\t%d" lo hi
 					if Opt.get reading_frame = Six then
 						printf "\t%c" (if rc then '-' else '+')
