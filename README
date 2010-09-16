@@ -14,11 +14,14 @@ BINARY DISTRIBUTION
 Please see our web site for instructions on how to use this
 software. This distribution includes executables for 32-bit Linux,
 64-bit Linux, and 32-bit Mac OS X, as well as the parameter files
-needed to run them.
+needed to run them. PhyloCSF should be started using the ./PhyloCSF
+script, which will configure some environment variables and select the
+proper executable (which are stored in the bin/ subdirectory).
 
 PGP signatures for each executable by the maintainer (Mike Lin
-<mlin@mlin.net>) are also included, detached in *.sig files. The
-public key (D1AE42EA) is copied below and can be obtained from:
+<mlin@mlin.net>) are also included, detached in *.sig files in the bin/
+subdirectory. The public key (D1AE42EA) is copied below and can be
+obtained from:
 
 http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0xBA028A9FD1AE42EA
 or

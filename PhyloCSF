@@ -6,5 +6,12 @@ case $0 in
   * ) export PHYLOCSF_BASE=dirname $0
 esac
 
-export CAMOMILE_BASE=$PHYLOCSF_BASE/share/camomile
-$PHYLOCSF_BASE/PhyloCSF.$ARCH
+EXE=$PHYLOCSF_BASE/bin/PhyloCSF.$ARCH
+if [ -f $EXE ]
+then
+  export CAMOMILE_BASE=$PHYLOCSF_BASE/share/camomile
+  chmod u+x $EXE
+  $EXE $@
+else
+  echo "No executable available for architecture: $ARCH"
+fi
