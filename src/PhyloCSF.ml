@@ -7,6 +7,15 @@ open CamlPaml
 
 Gsl_error.init ()
 
+try
+	let base = Sys.getenv "PHYLOCSF_BASE"
+	if not (Sys.file_exists base && Sys.is_directory base) then
+		raise Not_found
+with
+	| _ -> 
+		eprintf "error: PHYLOCSF_BASE environment variable must be set to the root directory of the source or executable distribution.\n"
+		exit (-1)
+
 module Codon = CamlPaml.Code.Codon64
 type reading_frame = One | Three | Six
 type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
@@ -32,7 +41,7 @@ if List.length cmd < 1 then
 	OptParser.usage opt_parser ()
 	exit (-1)
 	
-let fp_params = List.hd cmd
+let paramset = List.hd cmd
 let fns_input = List.tl cmd
 
 if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
@@ -304,11 +313,12 @@ let process_alignment (nt,t,model) fn =
 (******************************************************************************)
 
 let load_parameters () =
-	let fn_tree = fp_params ^ ".nh"
-	let fn_ecm_c = fp_params ^ "_coding.ECM"
-	let fn_ecm_nc = fp_params ^ "_noncoding.ECM"
+	let paramdir = Filename.concat (Sys.getenv "PHYLOCSF_BASE") "PhyloCSF_Parameters"
+	let fn_tree = Filename.concat paramdir (paramset ^ ".nh")
+	let fn_ecm_c = Filename.concat paramdir (paramset ^ "_coding.ECM")
+	let fn_ecm_nc = Filename.concat paramdir (paramset ^ "_noncoding.ECM")
 	if not (List.for_all Sys.file_exists [fn_tree; fn_ecm_c; fn_ecm_nc]) then
-		failwith (sprintf "Could not find required parameter files prefixed by %s\n" fp_params)
+		failwith (sprintf "Could not find required parameter files prefixed by %s in %s\n" paramset paramdir)
 
 	let nt = File.with_file_in fn_tree (fun input -> NewickParser.parse NewickLexer.token (Lexing.from_input input))
 
