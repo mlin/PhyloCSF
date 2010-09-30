@@ -140,7 +140,9 @@ let find_orfs ?(ofs=0) dna =
 		orfs := List.flatten all_suborfs
 	
 	if Opt.get orf_mode = ToFirstStop && !orfs <> [] then
-		orfs := [List.hd (List.rev !orfs)]
+		let ((firstorflo,_) as firstorf) = List.hd (List.rev !orfs)
+		orfs := if firstorflo = ofs then [firstorf] else []
+			
 	
 	!orfs |> List.rev |> List.enum |> filter
 		fun (lo,hi) ->
