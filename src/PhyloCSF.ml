@@ -7,6 +7,8 @@ open CamlPaml
 
 Gsl_error.init ()
 
+module SMap = Map.StringMap
+module SSet = Set.StringSet
 module Codon = CamlPaml.Code.Codon64
 type reading_frame = One | Three | Six
 type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
@@ -19,6 +21,7 @@ let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default ml
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
 let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
+let print_bls = opt ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
 let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
 let remove_ref_gaps = opt ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
@@ -200,6 +203,22 @@ let pleaves ?(lo=0) ?hi t leaf_ord aln =
 
 (******************************************************************************)
 
+(* based on the Newick tree, compute the average branch length score for each alignment column in
+the interval [lo,hi] *)
+let bls nt aln which_row lo hi =
+	assert (hi >= lo)
+	let pres = function '-' | '.' | 'N' -> false | _ -> true
+	let bl_total = ref 0.
+	for i = lo to hi do
+		let subtree =
+			Newick.subtree
+				fun sp -> try pres aln.(SMap.find sp which_row).[i] with Not_found -> false
+				nt
+		bl_total := !bl_total +. Option.map_default Newick.total_length 0. subtree
+	!bl_total /. (Newick.total_length nt *. float (hi-lo+1))
+
+(******************************************************************************)
+
 let u2t = function 'u' -> 't' | 'U' -> 'T' | x -> x
 let fn2id fn = if fn = "" then "(STDIN)" else fn
 let translate dna =
@@ -214,9 +233,6 @@ let translate dna =
 			pp.[i] <- '?'
 	pp
 	
-module SMap = Map.StringMap
-module SSet = Set.StringSet
-
 let process_alignment (nt,t,model) fn =
 	try
 		(* load alignment from file *)
@@ -281,6 +297,9 @@ let process_alignment (nt,t,model) fn =
 						printf "\t%d\t%d" lo hi
 					if Opt.get reading_frame = Six then
 						printf "\t%c" (if rc then '-' else '+')
+					if Opt.get print_bls then
+						let rgn_bls = bls nt (if rc then rc_aln else aln) which_row lo hi
+						printf "\t%.4f" rgn_bls
 					let refdna = String.sub (if rc then rc_aln.(0) else aln.(0)) lo (hi-lo+1)
 					if Opt.get print_dna then
 						printf "\t%s" refdna
