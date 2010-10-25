@@ -45,9 +45,9 @@ let congruent ?(tol=1e-6) ~labels ~branches t1 t2 =
 	else
 		try
 			for i = 0 to size t1 - 1 do
-				if parent t1 i <> parent t2 i then raise False
-				assert (sibling t1 i = sibling t2 i)
-				assert (children t1 i = children t2 i)
+				if i < root t1 && parent t1 i <> parent t2 i then raise False
+				assert (i = root t1 || sibling t1 i = sibling t2 i)
+				assert (i < leaves t1 || children t1 i = children t2 i)
 				if labels && label t1 i <> label t2 i then raise False
 				if branches && abs_float (branch t1 i -. branch t2 i) > tol then raise False
 			true
