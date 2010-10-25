@@ -124,12 +124,16 @@ let find_orfs ?(ofs=0) dna =
 							assert ((codon_hi-start+1) mod 3 = 0)
 							orfs := (start,codon_hi) :: !orfs
 				starts := []
-	!starts |> List.iter
-		fun start ->
-			let rem = len-start
-			orfs := (start,start+(rem/3)*3-1) :: !orfs
+				
+	if not atg then
+		(* add stuff that goes off the end of the alignment *)
+		!starts |> List.iter
+			fun start ->
+				let rem = len-start
+				orfs := (start,start+(rem/3)*3-1) :: !orfs
 			
 	if Opt.get orf_mode = StopStop3 then
+		(* look at shorter sub-ORFs of each stop-stop ORF *)
 		let all_suborfs =
 			!orfs |> List.map
 				fun (lo,hi) ->
