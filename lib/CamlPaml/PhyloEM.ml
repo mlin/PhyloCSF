@@ -134,21 +134,8 @@ let d_ell_dQ_dxi inst ss i =
 						tot := !tot +. ssbrab *. dPt_dxi_a.(b) /. pa.{b}
 	!tot
 
-let d_ell_dQ_dx inst ss = Array.init (Array.length (PM.P14n.p14n inst).PM.P14n.q_domains) (d_ell_dQ_dxi inst ss)
-
-(* numerical estimate - for debugging *)
-let nd_ell_dQ_dx inst ss =
-	let q_settings = PM.P14n.q_settings inst
-	let np = Array.length (PM.P14n.p14n inst).PM.P14n.q_domains
-	Array.init np
-		fun i ->
-			let f x =
-				let settings = Array.copy q_settings
-				settings.(i) <- x
-				let xinst =	PM.P14n.update ~q_settings:q_settings inst
-				ell (PM.P14n.model xinst) ss
-			let { Gsl_fun.res = res } = Gsl_diff.central f q_settings.(i)
-			res
+let d_ell_dQ_dx inst ss =
+	Array.init (Array.length (PM.P14n.p14n inst).PM.P14n.q_domains) (d_ell_dQ_dxi inst ss)
 
 let d_ell_dbranch inst br ss =
 	let m = PM.P14n.model inst
