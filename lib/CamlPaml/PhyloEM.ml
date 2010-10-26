@@ -90,10 +90,11 @@ let d_ell_dQ_dxi inst ss i =
 		let any = ref false
 		let dQ_dxi =
 			try
+				let access ar i = if Array.length ar = 1 then ar.(0) else ar.(i)
 				let (_,_,last_dQ_dxi,last_any) =
 					find
 						function
-							| (last_q_p14n,last_scale_p14n,last_dQ_dxi,last_any) when last_q_p14n == p14n.PM.P14n.q_p14ns.(br) && last_scale_p14n == p14n.PM.P14n.q_scale_p14ns.(br) -> true
+							| (last_q_p14n,last_scale_p14n,last_dQ_dxi,last_any) when last_q_p14n == (access p14n.PM.P14n.q_p14ns br) && last_scale_p14n == (access p14n.PM.P14n.q_scale_p14ns br) -> true
 							| _ -> false
 						!previous
 				any := last_any
