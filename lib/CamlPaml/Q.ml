@@ -190,6 +190,8 @@ module Diag = struct
 			| None ->
 				q.memoized_to_Pt <- Some (Tools.weakly_memoize (real_to_Pt q))
 				to_Pt q t
+				
+	let to_Pt_gc q = q.memoized_to_Pt <- None
 
 	let dPt_dt ~q ~t =
 		let n,_ = Gsl_matrix.dims q.q
