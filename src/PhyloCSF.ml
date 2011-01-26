@@ -10,6 +10,7 @@ Gsl_error.init ()
 module SMap = Map.StringMap
 module SSet = Set.StringSet
 module Codon = CamlPaml.Code.Codon64
+type strategy = PhyloCSF of [`MaxLik | `FixedLik] | OmegaTest
 type reading_frame = One | Three | Six
 type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
 
@@ -17,7 +18,17 @@ let opt_parser = OptParser.make ~usage:"%prog parameter_set [file1 file2 ...]\ni
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
 let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
-let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)" (Opt.value_option "mle|fixed" (Some PhyloCSFModel.MaxLik) (fun s -> match String.lowercase s with "mle" -> PhyloCSFModel.MaxLik | "fixed" -> PhyloCSFModel.FixedLik | x -> invalid_arg x) (fun _ s -> sprintf "invalid strategy %s" s))
+
+let strategy = (opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)"
+                   (Opt.value_option "mle|fixed" (Some (PhyloCSF `MaxLik))
+                       (fun s ->
+                           match String.lowercase s with
+                               | "mle" -> PhyloCSF `MaxLik
+                               | "fixed" -> PhyloCSF `FixedLik
+                               | "omega" -> OmegaTest
+                               | x -> invalid_arg x)
+                       (fun _ s -> sprintf "invalid strategy %s" s)))
+
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
 let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
@@ -273,8 +284,14 @@ let process_alignment (nt,t,model) fn =
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
-							let score, diag = PhyloCSFModel.score (Opt.get strategy) model aln_leaves
-							Some (score,rc,lo,hi)
+							match Opt.get strategy with
+								| PhyloCSF `MaxLik ->
+									let score, _ = PhyloCSFModel.score PhyloCSFModel.MaxLik model aln_leaves
+									Some (score,rc,lo,hi)
+								| PhyloCSF `FixedLik ->
+									let score, _ = PhyloCSFModel.score PhyloCSFModel.FixedLik model aln_leaves
+									Some (score,rc,lo,hi)
+								| OmegaTest -> Some (OmegaModel.bayesFactor t aln_leaves,rc,lo,hi)
 						with
 							| exn ->
 								(* problem evaluating an individual region within the
