@@ -21,6 +21,7 @@ let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default ml
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
 let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
+let print_orfs = opt ~l:"allScores" ~h:"report scores of all ORFs evaluated, not just the max" (StdOpt.store_true ())
 let print_bls = opt ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
 let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
@@ -294,24 +295,26 @@ let process_alignment (nt,t,model) fn =
 
 			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
 
-			(* report best-scoring region *)
-			(* rgns_scores |> iter *)
-			Enum.singleton (reduce max rgns_scores) |> iter
-				fun (score,rc,lo,hi) ->
-					printf "%s\tdecibans\t%.4f" (fn2id fn) score
-					if Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs then
-						printf "\t%d\t%d" lo hi
-					if Opt.get reading_frame = Six then
-						printf "\t%c" (if rc then '-' else '+')
-					if Opt.get print_bls then
-						let rgn_bls = bls nt (if rc then rc_aln else aln) which_row lo hi
-						printf "\t%.4f" rgn_bls
-					let refdna = String.sub (if rc then rc_aln.(0) else aln.(0)) lo (hi-lo+1)
-					if Opt.get print_dna then
-						printf "\t%s" refdna
-					if Opt.get print_aa then
-						printf "\t%s" (translate refdna)
-					printf "\n"
+
+			let report_score ty (score,rc,lo,hi) =
+				printf "%s\t%s\t%.4f" (fn2id fn) ty score
+				if Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs then
+					printf "\t%d\t%d" lo hi
+				if Opt.get reading_frame = Six then
+					printf "\t%c" (if rc then '-' else '+')
+				if Opt.get print_bls then
+					let rgn_bls = bls nt (if rc then rc_aln else aln) which_row lo hi
+					printf "\t%.4f" rgn_bls
+				let refdna = String.sub (if rc then rc_aln.(0) else aln.(0)) lo (hi-lo+1)
+				if Opt.get print_dna then
+					printf "\t%s" refdna
+				if Opt.get print_aa then
+					printf "\t%s" (translate refdna)
+				printf "\n"
+						
+			if Opt.get print_orfs then
+				Enum.clone rgns_scores |> iter (report_score "orf_score(decibans)")
+			reduce max rgns_scores |> report_score (if Opt.get orf_mode <> AsIs || Opt.get reading_frame <> One then "max_score(decibans)" else "score(decibans)")
 		with
 			| ((Assert_failure _) as exn) -> raise exn
 			(* move on to the next alignment: convergence problems, no ORFs found, etc. *)
