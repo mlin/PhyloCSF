@@ -93,13 +93,13 @@ let db x = sprintf "%.2f" (10. *. x /. log 10.)
 let llr_FixedLik t model leaves =
 	let lpr_c, inst_c = lpr_leaves model.coding_model leaves t
 	let lpr_n, inst_n = lpr_leaves model.noncoding_model leaves t
-	let diag = ["w",(sf t); "L(C)",(db lpr_c);"L(NC)",(db lpr_n)]
+	let diag = ["rho",(sf t); "L(C)",(db lpr_c);"L(NC)",(db lpr_n)]
 	lpr_c -. lpr_n, diag
 	
 let llr_MaxLik ?init model leaves =
-	let lambda_c, inst_c, lpr_c = maximize_lpr ?init (lpr_leaves model.coding_model leaves)
-	let lambda_n, inst_n, lpr_n = maximize_lpr ?init (lpr_leaves model.noncoding_model leaves)
-	let diag = (match init with Some w0 -> ["w_0", (sf w0)] | None -> []) @ [ "w_c",(sf lambda_c); "w_n", (sf lambda_n); "L(C)", (db lpr_c); "L(NC)", (db lpr_n)]
+	let rho_c, inst_c, lpr_c = maximize_lpr ?init (lpr_leaves model.coding_model leaves)
+	let rho_n, inst_n, lpr_n = maximize_lpr ?init (lpr_leaves model.noncoding_model leaves)
+	let diag = (match init with Some w0 -> ["rho_0", (sf w0)] | None -> []) @ [ "rho_C",(sf rho_c); "rho_N", (sf rho_n); "L(C)", (db lpr_c); "L(NC)", (db lpr_n)]
 	lpr_c -. lpr_n, diag
 
 type strategy =

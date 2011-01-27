@@ -10,6 +10,7 @@ Gsl_error.init ()
 module SMap = Map.StringMap
 module SSet = Set.StringSet
 module Codon = CamlPaml.Code.Codon64
+type strategy = PhyloCSF of [`MaxLik | `FixedLik] | OmegaTest
 type reading_frame = One | Three | Six
 type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
 
@@ -17,18 +18,34 @@ let opt_parser = OptParser.make ~usage:"%prog parameter_set [file1 file2 ...]\ni
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
 let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
-let strategy = opt ~l:"strategy" ~h:"parameter optimization strategy (default mle)" (Opt.value_option "mle|fixed" (Some PhyloCSFModel.MaxLik) (fun s -> match String.lowercase s with "mle" -> PhyloCSFModel.MaxLik | "fixed" -> PhyloCSFModel.FixedLik | x -> invalid_arg x) (fun _ s -> sprintf "invalid strategy %s" s))
+
+let strategy = (opt ~l:"strategy" ~h:"evaluation strategy (default mle)"
+                   (Opt.value_option "mle|fixed|omega" (Some (PhyloCSF `MaxLik))
+                       (fun s ->
+                           match String.lowercase s with
+                               | "mle" -> PhyloCSF `MaxLik
+                               | "fixed" -> PhyloCSF `FixedLik
+                               | "omega" -> OmegaTest
+                               | x -> invalid_arg x)
+                       (fun _ s -> sprintf "invalid strategy %s" s)))
+
 let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
-let orf_mode = opt ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
-let min_codons = opt ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
+
+let group = OptParser.add_group opt_parser "alignment interpretation"
+let remove_ref_gaps = opt ~group ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
+let allow_ref_gaps = opt ~group ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
+let desired_species = opt ~group ~l:"species" ~h:"hint that only this subset of species will be used in any of the alignments; this does not change the calculation mathematically, but can speed it up" (StdOpt.str_option ~metavar:"Species1,Species2,..." ())
+
+let group = OptParser.add_group opt_parser "searching for ORFs"
+let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
+let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
 let print_orfs = opt ~l:"allScores" ~h:"report scores of all ORFs evaluated, not just the max" (StdOpt.store_true ())
-let print_bls = opt ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
-let print_dna = opt ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
-let print_aa = opt ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
-let remove_ref_gaps = opt ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
-let allow_ref_gaps = opt ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
-let desired_species = opt ~l:"species" ~h:"hint that only this subset of species will be used in any of the alignments; this does not change the calculation mathematically, but can speed it up" (StdOpt.str_option ~metavar:"Species1,Species2,..." ())
-let debug = opt ~l:"debug" ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
+
+let group = OptParser.add_group opt_parser "output control"
+let print_dna = opt ~group ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
+let print_aa = opt ~group ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
+let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
+let debug = opt ~l:"debug" ~group ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
 
@@ -240,7 +257,7 @@ let translate dna =
 			pp.[i] <- '?'
 	pp
 	
-let process_alignment (nt,t,model) fn =
+let process_alignment (nt,t,evaluator) fn =
 	try
 		(* load alignment from file *)
 		let lines = if fn = "" then IO.lines_of stdin else File.lines_of fn
@@ -274,7 +291,7 @@ let process_alignment (nt,t,model) fn =
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
-							let score, diag = PhyloCSFModel.score (Opt.get strategy) model aln_leaves
+							let score = evaluator aln_leaves
 							Some (score,rc,lo,hi)
 						with
 							| exn ->
@@ -294,7 +311,6 @@ let process_alignment (nt,t,model) fn =
 								None
 
 			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
-
 
 			let report_score ty (score,rc,lo,hi) =
 				printf "%s\t%s\t%.4f" (fn2id fn) ty score
@@ -331,30 +347,24 @@ let process_alignment (nt,t,model) fn =
 	
 (******************************************************************************)
 
-let load_parameters () =
+let initialize_strategy () =
 	let paramfile suffix =
-		if (try ignore (String.index paramset '/'); false with Not_found -> true) then
-			try
-				let base = Sys.getenv "PHYLOCSF_BASE"
-				if not (Sys.file_exists base && Sys.is_directory base) then
-					raise Not_found
-				Filename.concat (Filename.concat base "PhyloCSF_Parameters") (paramset ^ suffix)
-			with
-				| _ -> failwith "PHYLOCSF_BASE environment variable must be set to the root directory of the source or executable distribution"
-		else
-			(* paramset is a relative or absolute path *)
-			paramset ^ suffix
+		let fn =
+			if (try ignore (String.index paramset '/'); false with Not_found -> true) then
+				try
+					let base = Sys.getenv "PHYLOCSF_BASE"
+					if not (Sys.file_exists base && Sys.is_directory base) then
+						raise Not_found
+					Filename.concat (Filename.concat base "PhyloCSF_Parameters") (paramset ^ suffix)
+				with
+					| _ -> failwith "PHYLOCSF_BASE environment variable must be set to the root directory of the source or executable distribution"
+			else
+				(* paramset is a relative or absolute path *)
+				paramset ^ suffix
+		if not (Sys.file_exists fn) then failwith (sprintf "could not find required parameter file %s" fn)
+		fn
 	
 	let fn_tree = paramfile ".nh"
-	let fn_ecm_c = paramfile "_coding.ECM"
-	let fn_ecm_nc = paramfile "_noncoding.ECM"	
-	
-	List.iter
-		fun fn ->
-			if not (Sys.file_exists fn) then
-				failwith (sprintf "could not find required parameter file %s" fn)
-		[fn_tree; fn_ecm_c; fn_ecm_nc]
-
 	let nt = File.with_file_in fn_tree (fun input -> NewickParser.parse NewickLexer.token (Lexing.from_input input))
 
 	let desired_species = if Opt.is_set desired_species then String.nsplit (Opt.get desired_species) "," |> List.fold_left (flip SSet.add) SSet.empty else SSet.empty
@@ -367,13 +377,28 @@ let load_parameters () =
 				| _ -> failwith "specify at least two available --species"
 
 	let t = T.of_newick snt
-	let s1, pi1 = ECM.import_parameters fn_ecm_c
-	let s2, pi2 = ECM.import_parameters fn_ecm_nc
-	let model = PhyloCSFModel.make s1 pi1 s2 pi2 t
-	nt, t, model
+	
+	let evaluator =
+		match Opt.get strategy with
+			| PhyloCSF substrategy ->
+				let fn_ecm_c = paramfile "_coding.ECM"
+				let fn_ecm_nc = paramfile "_noncoding.ECM"	
+
+				let s1, pi1 = ECM.import_parameters fn_ecm_c
+				let s2, pi2 = ECM.import_parameters fn_ecm_nc
+				let model = PhyloCSFModel.make s1 pi1 s2 pi2 t
+
+				fun leaves ->
+					fst
+						PhyloCSFModel.score
+							match substrategy with `MaxLik -> PhyloCSFModel.MaxLik | `FixedLik -> PhyloCSFModel.FixedLik
+							model
+							leaves
+			| OmegaTest -> (fun leaves -> fst (OmegaModel.score t leaves))
+	nt, t, evaluator
 	
 let main () =
-	let parameters = load_parameters ()
+	let strategy = initialize_strategy ()
 	
 	let fns_alignments =
 		if Opt.get filenames then
@@ -392,6 +417,6 @@ let main () =
 		else
 			List.enum fns_input
 		
-	foreach fns_alignments (process_alignment parameters)
+	foreach fns_alignments (process_alignment strategy)
 
 main ()
