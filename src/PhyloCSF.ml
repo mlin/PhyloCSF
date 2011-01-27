@@ -45,7 +45,7 @@ let group = OptParser.add_group opt_parser "output control"
 let print_dna = opt ~group ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~group ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
 let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
-let debug = opt ~l:"debug" ~group ~h:"print stack traces for all exceptions" (StdOpt.store_true ())
+let debug = opt ~l:"debug" ~group ~h:"print extra information about parameters and errors" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
 
@@ -291,8 +291,8 @@ let process_alignment (nt,t,evaluator) fn =
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
-							let score = evaluator aln_leaves
-							Some (score,rc,lo,hi)
+							let score, diag = evaluator aln_leaves
+							Some (score,rc,lo,hi,diag)
 						with
 							| exn ->
 								(* problem evaluating an individual region within the
@@ -312,7 +312,7 @@ let process_alignment (nt,t,evaluator) fn =
 
 			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
 
-			let report_score ty (score,rc,lo,hi) =
+			let report_score ty (score,rc,lo,hi,diag) =
 				printf "%s\t%s\t%.4f" (fn2id fn) ty score
 				if Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs then
 					printf "\t%d\t%d" lo hi
@@ -326,6 +326,9 @@ let process_alignment (nt,t,evaluator) fn =
 					printf "\t%s" refdna
 				if Opt.get print_aa then
 					printf "\t%s" (translate refdna)
+				if Opt.get debug then
+					printf "\t#"
+					foreach (List.enum diag) (fun (k,v) -> printf " %s=%s" k v)
 				printf "\n"
 						
 			if Opt.get print_orfs then
@@ -389,12 +392,11 @@ let initialize_strategy () =
 				let model = PhyloCSFModel.make s1 pi1 s2 pi2 t
 
 				fun leaves ->
-					fst
-						PhyloCSFModel.score
-							match substrategy with `MaxLik -> PhyloCSFModel.MaxLik | `FixedLik -> PhyloCSFModel.FixedLik
-							model
-							leaves
-			| OmegaTest -> (fun leaves -> fst (OmegaModel.score t leaves))
+					PhyloCSFModel.score
+						match substrategy with `MaxLik -> PhyloCSFModel.MaxLik | `FixedLik -> PhyloCSFModel.FixedLik
+						model
+						leaves
+			| OmegaTest -> (fun leaves -> (OmegaModel.score t leaves))
 	nt, t, evaluator
 	
 let main () =
