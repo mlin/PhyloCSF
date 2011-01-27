@@ -1,5 +1,8 @@
+(** omega (dN/dS) test, similar to using PAML to test for omega<1, but with a few of our own touches *)
+
 open Batteries_uni
 open Printf
+
 open CamlPaml
 open Expr
 
@@ -153,8 +156,8 @@ let half_cauchy_lpdf ?(mode=0.0) ~scale x =
 let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.75 (* rho = tree_scale (as in manuscript) *)
 let lpr_kappa = half_cauchy_lpdf ~mode:2.5 ~scale:0.75
 
-(* find maximum likelihood estimates of kappa & omega *)
-let kw_mle leaves inst =
+(* find maximum likelihood estimates of kappa & rho *)
+let kr_mle leaves inst =
 	let f_rho inst rho =
 		let ts = PM.P14n.tree_settings inst
 		ts.(0) <- rho
@@ -183,17 +186,30 @@ let kw_mle leaves inst =
 		inst_kappa, lpr
 	(* 3 rounds, cyclic coordinate ascent *)
 	round (fst (round (fst (round inst))))
-		
+
+let sf = sprintf "%.2f"
+let db x = sprintf "%.2f" (10. *. x /. log 10.)
 	
-let score tree_shape leaves =
+let score ?(omega_H1=0.2) ?(sigma_H1=0.01) tree_shape leaves =
 	(* H0: omega=1, sigma=1, MLE(kappa), MLE(rho) *)
-	let inst0, lpr_h0 = kw_mle leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
+	let inst0, lpr_H0 = kr_mle leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
+	let qs0 = PM.P14n.q_settings inst0
+	let ts0 = PM.P14n.tree_settings inst0
 	
 	(* H1: omega=0.2, sigma=0.01, MLE(kappa), MLE(rho) *)
-	let inst1, lpr_h1 =	
+	let inst1, lpr_H1 =	
 		let qs = PM.P14n.q_settings inst0
-		qs.(1) <- 0.2
-		qs.(2) <- 0.01
-		kw_mle leaves (PM.P14n.update ~q_settings:qs inst0)
+		qs.(1) <- omega_H1
+		qs.(2) <- sigma_H1
+		kr_mle leaves (PM.P14n.update ~q_settings:qs inst0)
+	let qs1 = PM.P14n.q_settings inst1
+	let ts1 = PM.P14n.tree_settings inst1
 	
-	10. *. (lpr_h1 -. lpr_h0) /. log 10.
+	let diag = ["L(H0)", (db lpr_H0);
+	            "rho_H0", (sf ts0.(0)); "kappa_H0", (sf qs0.(0));
+	            "omega_H0", (sf qs0.(1)); "sigma_H0", (sf qs0.(2));
+	            "L(H1)", (db lpr_H1);
+	            "rho_H1", (sf ts1.(0)); "kappa_H1", (sf qs1.(0));
+	            "omega_H1", (sf qs1.(1)); "sigma_H1", (sf qs1.(2)) ]
+	
+	(10. *. (lpr_H1 -. lpr_H0) /. log 10.), diag

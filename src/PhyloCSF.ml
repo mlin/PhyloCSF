@@ -392,7 +392,7 @@ let initialize_strategy () =
 							match substrategy with `MaxLik -> PhyloCSFModel.MaxLik | `FixedLik -> PhyloCSFModel.FixedLik
 							model
 							leaves
-			| OmegaTest -> (fun leaves -> OmegaModel.score t leaves)
+			| OmegaTest -> (fun leaves -> fst (OmegaModel.score t leaves))
 	nt, t, evaluator
 	
 let main () =
