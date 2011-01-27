@@ -110,7 +110,12 @@ let update_f3x4 inst leaves =
 						inc 2 (Code.DNA.index n3)
 					| _ -> ()
 	let qs = PM.P14n.q_settings inst
-
+	
+	(*
+	TODO: Pond et al. Correcting the Bias of Empirical Frequency Parameter Estimators in Codon
+	      Models. PLoS One 5:e11230 (2010).
+	*)
+	
 	qs.(3) <- float counts.(0).(0) /. float counts.(0).(3)
 	qs.(4) <- float counts.(0).(1) /. float counts.(0).(3)
 	qs.(5) <- float counts.(0).(2) /. float counts.(0).(3)
@@ -125,7 +130,17 @@ let update_f3x4 inst leaves =
 	
 	PM.P14n.update ~q_settings:qs inst
 	
-(* prior distributions *)
+(* Calculate log-probability of the alignment *)
+let lpr_leaves inst leaves =
+	let workspace = PhyloLik.new_workspace (PM.tree (PM.P14n.model inst)) Codon.dim
+	let lik = ref 0.
+	leaves |> Array.iter
+		fun lvs ->
+			let lvslik = PhyloLik.likelihood (PM.prepare_lik ~workspace:workspace (PM.P14n.model inst) lvs)
+			lik := !lik +. log lvslik
+	!lik
+
+(* a little bit of regularization: half-cauchy prior distributions for rho and kappa *)
 let pi = acos (-1.0)
 let cauchy_cdf scale x = atan (x /. scale) /. pi +. 0.5
 let half_cauchy_lpdf ?(mode=0.0) ~scale x =
@@ -134,46 +149,51 @@ let half_cauchy_lpdf ?(mode=0.0) ~scale x =
 	let denom = 1.0 -. cauchy_cdf scale (0.0 -. mode)
 	assert (denom > 0.0)
 	log numer -. log denom
-let beta_lpdf ~a ~b x =
-	if x < 0.0 || x > 1.0 || a < 0.0 || b < 0.0 then invalid_arg "beta_lpdf"
-	log (Gsl_randist.beta_pdf x ~a ~b)
 
-let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:2.0 (* rho = tree_scale (as in manuscript) *)
-
-(*
+let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.75 (* rho = tree_scale (as in manuscript) *)
 let lpr_kappa = half_cauchy_lpdf ~mode:2.5 ~scale:0.75
-let lpr_omega = beta_lpdf ~a:1.0 ~b:4.0
-let lpr_sigma = beta_lpdf ~a:1.0 ~b:10.0
-*)
 
-let marginal_lpr ?init ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f =
-	let x_max, inst_max, lpr_max = PhyloCSFModel.maximize_lpr ?init ~lo ~hi ~accuracy:0.1 f
-	assert (lpr_max < 0.)
-	let scale = 0. -. lpr_max +. 21.
-	let scaled_lpr x = exp(scale +. (fst (f x)))
-	let { Gsl_fun.res = res; err = err } =
-		Gsl_integration.qag
-			scaled_lpr
-			~a:lo
-			~b:hi
-			~epsabs:max_float
-			~epsrel:accuracy
-			Gsl_integration.GAUSS21
-			Gsl_integration.make_ws 1000
-	log res -. scale
-
-let bayesFactor tree_shape leaves =
-
-	let inst0 = update_f3x4 (new_instance ~kappa:3.0 tree_shape) leaves
-	let inst1 =	
+(* find maximum likelihood estimates of kappa & omega *)
+let kw_mle leaves inst =
+	let f_rho inst rho =
+		let ts = PM.P14n.tree_settings inst
+		ts.(0) <- rho
+		let inst_rho = PM.P14n.update ~tree_settings:ts inst
+		(lpr_rho rho +. lpr_leaves inst_rho leaves), inst_rho
+	let f_kappa inst kappa =
+		let qs = PM.P14n.q_settings inst
+		qs.(0) <- kappa
+		let inst_kappa = PM.P14n.update ~q_settings:qs inst
+		(lpr_kappa kappa +. lpr_leaves inst_kappa leaves), inst_kappa
+	let round inst =
+		let _, inst_rho, _ =
+			PhyloCSFModel.maximize_lpr
+				~init:(PM.P14n.tree_settings inst).(0)
+				~lo:0.001
+				~hi:10.
+				~accuracy:0.01
+				f_rho inst
+		let _, inst_kappa, lpr =
+			PhyloCSFModel.maximize_lpr
+				~init:(PM.P14n.q_settings inst).(0)
+				~lo:1.0
+				~hi:10.
+				~accuracy:0.01
+				f_kappa inst_rho
+		inst_kappa, lpr
+	(* 3 rounds, cyclic coordinate ascent *)
+	round (fst (round (fst (round inst))))
+		
+	
+let score tree_shape leaves =
+	(* H0: omega=1, sigma=1, MLE(kappa), MLE(rho) *)
+	let inst0, lpr_h0 = kw_mle leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
+	
+	(* H1: omega=0.2, sigma=0.01, MLE(kappa), MLE(rho) *)
+	let inst1, lpr_h1 =	
 		let qs = PM.P14n.q_settings inst0
 		qs.(1) <- 0.2
-		qs.(2) <- 0.05
-		PM.P14n.update ~q_settings:qs inst0
+		qs.(2) <- 0.01
+		kw_mle leaves (PM.P14n.update ~q_settings:qs inst0)
 	
-	let lpr_leaves_h0 =
-		marginal_lpr (fun rho -> lpr_rho rho +. fst (PhyloCSFModel.lpr_leaves inst0 leaves rho), inst0)
-	let lpr_leaves_h1 =
-		marginal_lpr (fun rho -> lpr_rho rho +. fst (PhyloCSFModel.lpr_leaves inst1 leaves rho), inst1)
-	
-	lpr_leaves_h1 -. lpr_leaves_h0
+	10. *. (lpr_h1 -. lpr_h0) /. log 10.
