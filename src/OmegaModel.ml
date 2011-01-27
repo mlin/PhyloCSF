@@ -143,31 +143,18 @@ let lpr_leaves inst leaves =
 			lik := !lik +. log lvslik
 	!lik
 
-(* a little bit of regularization: half-cauchy prior distributions for rho and kappa *)
-let pi = acos (-1.0)
-let cauchy_cdf scale x = atan (x /. scale) /. pi +. 0.5
-let half_cauchy_lpdf ?(mode=0.0) ~scale x =
-	if x < 0.0 || scale <= 0.0 || mode < 0.0 then invalid_arg "half_cauchy_lpdf"
-	let numer = 1.0 /. (pi *. scale *. (1.0 +. ((x -. mode) /. scale) ** 2.0))
-	let denom = 1.0 -. cauchy_cdf scale (0.0 -. mode)
-	assert (denom > 0.0)
-	log numer -. log denom
-
-let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.75 (* rho = tree_scale (as in manuscript) *)
-let lpr_kappa = half_cauchy_lpdf ~mode:2.5 ~scale:0.75
-
 (* find maximum likelihood estimates of kappa & rho *)
 let kr_mle leaves inst =
 	let f_rho inst rho =
 		let ts = PM.P14n.tree_settings inst
 		ts.(0) <- rho
 		let inst_rho = PM.P14n.update ~tree_settings:ts inst
-		(lpr_rho rho +. lpr_leaves inst_rho leaves), inst_rho
+		lpr_leaves inst_rho leaves, inst_rho
 	let f_kappa inst kappa =
 		let qs = PM.P14n.q_settings inst
 		qs.(0) <- kappa
 		let inst_kappa = PM.P14n.update ~q_settings:qs inst
-		(lpr_kappa kappa +. lpr_leaves inst_kappa leaves), inst_kappa
+		lpr_leaves inst_kappa leaves, inst_kappa
 	let round inst =
 		let _, inst_rho, _ =
 			PhyloCSFModel.maximize_lpr
