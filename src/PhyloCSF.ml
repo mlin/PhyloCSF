@@ -17,8 +17,6 @@ type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
 let opt_parser = OptParser.make ~usage:"%prog parameter_set [file1 file2 ...]\ninput will be read from stdin if no filenames are given." ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
-let filenames = opt ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
-
 let strategy = (opt ~l:"strategy" ~h:"evaluation strategy (default mle)"
                    (Opt.value_option "mle|fixed|omega" (Some (PhyloCSF `MaxLik))
                        (fun s ->
@@ -29,17 +27,17 @@ let strategy = (opt ~l:"strategy" ~h:"evaluation strategy (default mle)"
                                | x -> invalid_arg x)
                        (fun _ s -> sprintf "invalid strategy %s" s)))
 
-let reading_frame = opt ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
-
-let group = OptParser.add_group opt_parser "alignment interpretation"
+let group = OptParser.add_group opt_parser "input interpretation"
+let filenames = opt ~group ~l:"files" ~h:"input list(s) of alignment filenames instead of individual alignment(s)" (StdOpt.store_true ())
 let remove_ref_gaps = opt ~group ~l:"removeRefGaps" ~h:"automatically remove any alignment columns that are gapped in the reference sequence (nucleotide columns are removed individually; be careful about reading frame). By default, it is an error for the reference sequence to contain gaps" (StdOpt.store_true ())
-let allow_ref_gaps = opt ~group ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
+let allow_ref_gaps = opt ~hide:true ~group ~l:"allowRefGaps" ~h:"allow the reference sequence to contain gaps (each group of three nucleotide columns in the consensus alignment is treated as a codon site; be careful about reading frame)" (StdOpt.store_true ())
 let desired_species = opt ~group ~l:"species" ~h:"hint that only this subset of species will be used in any of the alignments; this does not change the calculation mathematically, but can speed it up" (StdOpt.str_option ~metavar:"Species1,Species2,..." ())
 
-let group = OptParser.add_group opt_parser "searching for ORFs"
+let group = OptParser.add_group opt_parser "searching mulitple reading frames and ORFs"
+let reading_frame = opt ~group ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
 let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
-let print_orfs = opt ~l:"allScores" ~h:"report scores of all ORFs evaluated, not just the max" (StdOpt.store_true ())
+let print_orfs = opt ~group ~l:"allScores" ~h:"report scores of all regions evaluated, not just the max" (StdOpt.store_true ())
 
 let group = OptParser.add_group opt_parser "output control"
 let print_dna = opt ~group ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
