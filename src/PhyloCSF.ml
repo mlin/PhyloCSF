@@ -348,8 +348,21 @@ let process_alignment (nt,t,evaluator) fn =
 	
 (******************************************************************************)
 
+(* parse a key<tab>value\n file format *)
+let parse_kv lines =
+	let f kv line =
+		let line = String.strip line
+		if String.length line = 0 || line.[0] = '#' then
+			kv
+		else
+			try
+				let (k,v) = String.split line "\t"
+				PMap.add k v kv
+			with Not_found -> PMap.add line "" kv
+	fold f PMap.empty lines
+
 let initialize_strategy () =
-	let paramfile suffix =
+	let paramfile ?(required=true) suffix =
 		let fn =
 			if (try ignore (String.index paramset '/'); false with Not_found -> true) then
 				try
@@ -362,7 +375,7 @@ let initialize_strategy () =
 			else
 				(* paramset is a relative or absolute path *)
 				paramset ^ suffix
-		if not (Sys.file_exists fn) then failwith (sprintf "could not find required parameter file %s" fn)
+		if required && not (Sys.file_exists fn) then failwith (sprintf "could not find required parameter file %s" fn)
 		fn
 	
 	let fn_tree = paramfile ".nh"
@@ -394,7 +407,20 @@ let initialize_strategy () =
 						match substrategy with `MaxLik -> PhyloCSFModel.MaxLik | `FixedLik -> PhyloCSFModel.FixedLik
 						model
 						leaves
-			| OmegaTest -> (fun leaves -> (OmegaModel.score t leaves))
+			| OmegaTest ->
+				let fn_config = paramfile ~required:false "_omega"
+				
+				let omega_H1, sigma_H1 =
+					if Sys.file_exists fn_config then
+						try
+							let kv = parse_kv (File.lines_of fn_config)
+							Some (float_of_string (PMap.find "omega_H1" kv)), Some (float_of_string (PMap.find "sigma_H1" kv))
+						with
+							| exn -> failwith (sprintf "configuration file %s exists but does not specify valid omega_H1 and sigma_H1 values" fn_config)
+					else
+						None, None
+			
+				fun leaves -> (OmegaModel.score ?omega_H1 ?sigma_H1 t leaves)
 	nt, t, evaluator
 	
 let main () =
