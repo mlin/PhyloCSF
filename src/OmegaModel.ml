@@ -153,8 +153,8 @@ let half_cauchy_lpdf ?(mode=0.0) ~scale x =
 	assert (denom > 0.0)
 	log numer -. log denom
 
-let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.75 (* rho = tree_scale (as in manuscript) *)
-let lpr_kappa = half_cauchy_lpdf ~mode:2.5 ~scale:0.75
+let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.5 (* rho = tree_scale (as in manuscript) *)
+let lpr_kappa k = Gsl_randist.gamma_pdf ~a:7.0 ~b:0.25 (k -. 1.0)
 
 (* find maximum likelihood estimates of kappa & rho *)
 let kr_mle leaves inst =
