@@ -154,10 +154,10 @@ let half_cauchy_lpdf ?(mode=0.0) ~scale x =
 	log numer -. log denom
 
 let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.5 (* rho = tree_scale (as in manuscript) *)
-let lpr_kappa k = Gsl_randist.gamma_pdf ~a:7.0 ~b:0.25 (k -. 1.0)
+let lpr_kappa k = log (Gsl_randist.gamma_pdf ~a:7.0 ~b:0.25 (k -. 1.0))
 
-(* find maximum likelihood estimates of kappa & rho *)
-let kr_mle leaves inst =
+(* find MAP estimates of kappa & rho *)
+let kr_map leaves inst =
 	let f_rho inst rho =
 		let ts = PM.P14n.tree_settings inst
 		ts.(0) <- rho
@@ -192,7 +192,7 @@ let db x = sprintf "%.2f" (10. *. x /. log 10.)
 	
 let score ?(omega_H1=0.2) ?(sigma_H1=0.01) tree_shape leaves =
 	(* H0: omega=1, sigma=1, MLE(kappa), MLE(rho) *)
-	let inst0, lpr_H0 = kr_mle leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
+	let inst0, lpr_H0 = kr_map leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
 	let qs0 = PM.P14n.q_settings inst0
 	let ts0 = PM.P14n.tree_settings inst0
 	
@@ -201,7 +201,7 @@ let score ?(omega_H1=0.2) ?(sigma_H1=0.01) tree_shape leaves =
 		let qs = PM.P14n.q_settings inst0
 		qs.(1) <- omega_H1
 		qs.(2) <- sigma_H1
-		kr_mle leaves (PM.P14n.update ~q_settings:qs inst0)
+		kr_map leaves (PM.P14n.update ~q_settings:qs inst0)
 	let qs1 = PM.P14n.q_settings inst1
 	let ts1 = PM.P14n.tree_settings inst1
 	
