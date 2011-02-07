@@ -77,13 +77,17 @@ module P14n = struct
 					tot := Expr.Add (q.(i).(j), !tot)
 			q.(i).(i) <- Expr.simplify (Expr.Sub (Expr.Val 0., !tot))
 
-	let instantiate_tree shape exprs settings =
+	let instantiate_tree shape exprs domains settings =
+		Array.iteri (fun i domain -> if not (Fit.check_domain domain settings.(i)) then invalid_arg ("CamlPaml.P14n.instantiate_tree: domain violation on variable " ^ (string_of_int i))) domains
+		
 		let tree = T.copy shape
 		for br = 0 to T.root tree - 1 do
 			T.put_branch tree br (Expr.eval exprs.(br) settings)
 		tree
 		
-	let instantiate_q exprs scale_expr settings =
+	let instantiate_q exprs scale_expr domains settings =
+		Array.iteri (fun i domain -> if not (Fit.check_domain domain settings.(i)) then invalid_arg ("CamlPaml.P14n.instantiate_q: domain violation on variable " ^ (string_of_int i))) domains
+
 		let scale = Expr.eval scale_expr settings
 		
 		if scale <= 0. then
@@ -95,7 +99,7 @@ module P14n = struct
 		
 		q
 		
-	let instantiate_qs p14ns scale_p14ns settings =
+	let instantiate_qs p14ns scale_p14ns domains settings =
 		let previous = ref [] (* memoized results from previous branches...I'm assuming the number of independent rate matrix parameterizations to be sublinear in the size of the tree, otherwise this memoization is quadratic... *)
 		Array.init (Array.length p14ns)
 			fun br ->
@@ -109,13 +113,13 @@ module P14n = struct
 					q
 				with
 					| Not_found ->
-						let q = instantiate_q p14ns.(br) scale_p14ns.(br) settings
+						let q = instantiate_q p14ns.(br) scale_p14ns.(br) domains settings
 						previous := (p14ns.(br),scale_p14ns.(br),q) :: !previous
 						q
 
 	let instantiate ?prior p14n ~q_settings ~tree_settings =
-		let qms = instantiate_qs p14n.q_p14ns p14n.q_scale_p14ns q_settings
-		let tree = instantiate_tree p14n.tree_shape p14n.tree_p14n tree_settings
+		let qms = instantiate_qs p14n.q_p14ns p14n.q_scale_p14ns p14n.q_domains q_settings
+		let tree = instantiate_tree p14n.tree_shape p14n.tree_p14n p14n.tree_domains tree_settings
 		{ model = make ?prior tree qms; p14n = p14n; q_settings = Array.copy q_settings; tree_settings = Array.copy tree_settings }
 			
 	let update ?prior ?q_settings ?tree_settings inst =
@@ -123,12 +127,12 @@ module P14n = struct
 		let newq = match q_settings with
 			| Some q_settings ->
 				pms_changed := true
-				instantiate_qs inst.p14n.q_p14ns inst.p14n.q_scale_p14ns q_settings
+				instantiate_qs inst.p14n.q_p14ns inst.p14n.q_scale_p14ns inst.p14n.q_domains q_settings
 			| None -> inst.model.qms
 		let newtree = match tree_settings with
 			| Some tree_settings ->
 				pms_changed := true
-				instantiate_tree inst.p14n.tree_shape inst.p14n.tree_p14n tree_settings
+				instantiate_tree inst.p14n.tree_shape inst.p14n.tree_p14n inst.p14n.tree_domains tree_settings
 			| None -> inst.model.tree
 		let prior = match prior with
 			| Some ar -> Array.copy ar

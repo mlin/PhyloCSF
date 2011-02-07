@@ -96,21 +96,25 @@ class multi_maximizer f df init =
 let make_multi_maximizer ~f ~df ~init = (new multi_maximizer f df init)
 
 type domain = Real | Pos | Neg | NonPos | NonNeg | Probability
-		
+
+let check_domain domain x =
+	match domain with
+		| Real when x=x -> true
+		| Pos when x > 0. -> true
+		| Neg when x < 0. -> true
+		| NonPos when x <= 0. -> true
+		| NonNeg when x >= 0. -> true
+		| Probability when x >= 0. && x <= 1. -> true
+		| _ -> false
+
+
 exception False
 let enforce_domain ?(rejection_value=neg_infinity) f domains =
 	fun x ->
 		if (Array.length x) <> Array.length domains then invalid_arg "CamlPaml.Fit.enforce_domains: length mismatch"
 		try
 			Array.iteri
-				fun i domain ->
-					match domain with
-						| Pos when x.(i) <= 0. -> raise False
-						| Neg when x.(i) >= 0. -> raise False
-						| NonPos when x.(i) > 0. -> raise False
-						| NonNeg when x.(i) < 0. -> raise False
-						| Probability when x.(i) < 0. || x.(i) > 1. -> raise False
-						| _ -> ()
+				fun i domain -> if not (check_domain domain x.(i)) then raise False
 				domains
 			f x
 		with

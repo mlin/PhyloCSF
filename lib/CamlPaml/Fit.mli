@@ -4,7 +4,7 @@
 
 (** a [maximizer] iteratively narrows down a local maximum of a one-dimensional function [f(x)] *)
 class type maximizer = object
-	(** current estimate of the maximum [max_x f(x)] *)
+	(** current estimate of the locally maximizing setting, [argmax_x f(x)] *)
 	method maximum : unit -> float
 	
 	(** current lower and upper bounds on [x] around the local maximum *)
@@ -46,6 +46,9 @@ class type multi_maximizer = object
 val make_multi_maximizer : f:(float array -> float) -> df:(float array -> float array) -> init:(float array) -> multi_maximizer
 
 type domain = Real | Pos | Neg | NonPos | NonNeg | Probability
+
+(** [check_domain domain x] returns [true] if [x] is in [domain], false otherwise *)
+val check_domain : domain -> float -> bool
 
 (** wrap the function [f(x)] to prevent the [multi_maximizer] from searching outside of the specified domain for each element of the vector input. *)
 val enforce_domain : ?rejection_value:float -> (float array -> float) -> (domain array) -> (float array -> float)
