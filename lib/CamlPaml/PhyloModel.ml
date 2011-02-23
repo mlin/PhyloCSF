@@ -100,6 +100,7 @@ module P14n = struct
 		q
 		
 	let instantiate_qs p14ns scale_p14ns domains settings =
+		if Array.length p14ns <> Array.length scale_p14ns then invalid_arg ("CamlPaml.P14n.instantiate: different numbers of rate matrix and scale p14ns")
 		let previous = ref [] (* memoized results from previous branches...I'm assuming the number of independent rate matrix parameterizations to be sublinear in the size of the tree, otherwise this memoization is quadratic... *)
 		Array.init (Array.length p14ns)
 			fun br ->
