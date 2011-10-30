@@ -36,7 +36,7 @@ let make_tree_p14n tree_shape = Array.init (T.size tree_shape - 1) (fun br -> Mu
 let make_p14n s tree_shape =
 	let tree_exprs = make_tree_p14n tree_shape
 	let q_exprs = make_q_p14n s
-	
+
 	{ PM.P14n.q_p14ns = [| q_exprs |]; q_scale_p14ns = [| qscale q_exprs |]; q_domains = [||];
 		tree_shape = (T.copy tree_shape); tree_p14n = tree_exprs; tree_domains = [|Fit.Pos|] }
 
@@ -59,7 +59,7 @@ let lpr_leaves inst leaves t =
 			let lvslik = PhyloLik.likelihood (PM.prepare_lik ~workspace:workspace (PM.P14n.model inst) lvs)
 			lik := !lik +. log lvslik
 	!lik, inst
-	
+
 let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f =
 	let good_init = Fit.find_init ~maxtries:250 ~logspace:true ~init:init ~lo:lo ~hi:hi ~f:(fun x -> fst (f x)) ()
 	let maximizer = Fit.make_maximizer ~f:(fun x -> fst (f x)) ~lo:lo ~hi:hi ~init:good_init
@@ -95,7 +95,7 @@ let llr_FixedLik t model leaves =
 	let lpr_n, inst_n = lpr_leaves model.noncoding_model leaves t
 	let diag = ["rho",(sf t); "L(C)",(db lpr_c);"L(NC)",(db lpr_n)]
 	lpr_c -. lpr_n, diag
-	
+
 let llr_MaxLik ?init model leaves =
 	let rho_c, inst_c, lpr_c = maximize_lpr ?init (lpr_leaves model.coding_model leaves)
 	let rho_n, inst_n, lpr_n = maximize_lpr ?init (lpr_leaves model.noncoding_model leaves)
@@ -114,4 +114,4 @@ let score strategy model leaves =
 	(10. *. score /. (log 10.)), diag
 
 
-	
+

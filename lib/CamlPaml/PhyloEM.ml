@@ -18,21 +18,21 @@ let collect_sufficient_statistics ?workspace m leaves ss =
 	for i = 0 to T.root t - 1 do
 		PhyloLik.add_branch_posteriors inter i ss.(i)
 	lik
-	
+
 let clean_sufficient_statistics ?(tol=1e-6) ss =
-	ss |> Array.iteri	
+	ss |> Array.iteri
 		fun br ssbr ->
 			ssbr |> Array.iteri
 				fun a row ->
-					row |> Array.iteri 
+					row |> Array.iteri
 						fun b ssab ->
 							if ssab < tol then
 								row.(b) <- 0.
-	
+
 let branch_ell m ss br =
 	let n = Q.Diag.dim (PM.q m 0)
 	let tot = ref 0.
-	
+
 	let ssbr = ss.(br)
 	let pbr = PM.p m br
 
@@ -45,7 +45,7 @@ let branch_ell m ss br =
 				tot := !tot +. ssbrkl *. log pbrk.{l}
 
 	!tot
-		
+
 let branches_ell m ss =
 	let t = PM.tree m
 	let nbr = T.size t - 1
@@ -57,7 +57,7 @@ let branches_ell m ss =
 let prior_ell m ss =
 	let n = Q.Diag.dim (PM.q m 0)
 	let tot = ref 0.
-	
+
 	let tree = PM.tree m
 
 	let rp = PM.prior m
@@ -77,9 +77,9 @@ let d_ell_dQ_dxi inst ss i =
 	let m = PM.P14n.model inst
 	let p14n = PM.P14n.p14n inst
 	let q_settings = PM.P14n.q_settings inst
-	
+
 	let tot = ref 0.
-	
+
 	let n = Q.Diag.dim (PM.q m 0)
 	let tree = PM.tree m
 	let nbr = T.size tree - 1
@@ -100,7 +100,7 @@ let d_ell_dQ_dxi inst ss i =
 				any := last_any
 				last_dQ_dxi
 			with
-				| Not_found  -> 
+				| Not_found  ->
 					let scale = Expr.eval p14n.PM.P14n.q_scale_p14ns.(br) q_settings
 					let scale2 = scale *. scale
 					let dscale_dxi = Expr.eval (Expr.deriv p14n.PM.P14n.q_scale_p14ns.(br) i) q_settings
@@ -173,7 +173,7 @@ let d_ell_dbranch inst br ss =
 let d_ell_dtree inst ss =
 	let nbr = T.size (PM.P14n.p14n inst).PM.P14n.tree_shape - 1
 	let np = Array.length (PM.P14n.p14n inst).PM.P14n.tree_domains
-	
+
 	let rslt = Array.make np 0.
 	for br = 0 to nbr-1 do
 		let rsltbr = d_ell_dbranch inst br ss

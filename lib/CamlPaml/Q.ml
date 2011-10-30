@@ -4,9 +4,9 @@ type matrix = float array array
 
 let validate ?(tol=1e-6) q =
 	let n = Array.length q
-	
+
 	if n < 2 then invalid_arg "CamlPaml.Q.validate: trivial matrix"
-	
+
 	Array.iteri
 		fun i qi ->
 			if Array.length qi <> n then invalid_arg "CamlPaml.Q.validate: non-square matrix"
@@ -47,12 +47,12 @@ let zdiagm ?c d a =
 	let c = match c with
 		| Some c -> c
 		| None -> Gsl_matrix_complex.create m p
-	
+
 	for i = 0 to m-1 do
 		let d_i = d.{i}
 		for j = 0 to p-1 do
 			c.{i,j} <- Complex.mul a.{i,j} d_i
-			
+
 	c
 
 let zinvm m =
@@ -72,13 +72,13 @@ module Diag = struct
 	type t = {
 		q : Gsl_matrix.matrix;			(* Q *)
 		s : Gsl_matrix_complex.matrix;	(* S = right eigenvectors (in the columns) *)
-		s' : Gsl_matrix_complex.matrix;	(* S' = left eigenvectors (in the rows) *) 
+		s' : Gsl_matrix_complex.matrix;	(* S' = left eigenvectors (in the rows) *)
 		l : Gsl_vector_complex.vector;	(* diag(L) = eigenvalues *)
 		pi : Gsl_vector.vector;
 		mutable have_pi : bool;
-		
+
 		mutable memoized_to_Pt : (float -> Gsl_matrix.matrix) option;
-		
+
 		mutable tol : float;
 	}
 
@@ -125,7 +125,7 @@ module Diag = struct
 			q.have_pi <- true
 		Gsl_vector.to_array q.pi
 
-	(** normalize to unity mean rate of replacement 
+	(** normalize to unity mean rate of replacement
 	let normalize ?tol q =
 		let n = Gsl_vector_complex.length q.l
 		let pi = equilibrium ?tol q
@@ -138,7 +138,7 @@ module Diag = struct
 		for i = 0 to n-1 do
 			nl.{i} <- Complex.div nl.{i} { Complex.re = !tot; im = 0. }
 		{ q with q = nq; l = nl } *)
-		
+
 	let scale q x =
 		if x <= 0. then invalid_arg "CamlPaml.Q.scale: nonpositive scale factor"
 		let xq = Gsl_matrix.copy q.q
@@ -148,14 +148,14 @@ module Diag = struct
 		for i = 0 to (Gsl_vector_complex.length xl) - 1 do
 			xl.{i} <- Complex.mul xl.{i} cx
 		{ q with q = xq; l = xl; memoized_to_Pt = None }
-		
+
 	let real_to_Pt q t =
 		if t < 0. then invalid_arg "CamlPaml.Q.to_Pt"
 		let ct = { Complex.re = t; im = 0. }
 		let expLt = Gsl_vector_complex.copy q.l
 
 		for i = 0 to Gsl_vector_complex.length expLt - 1 do
-			expLt.{i} <- Complex.exp (Complex.mul ct expLt.{i})	
+			expLt.{i} <- Complex.exp (Complex.mul ct expLt.{i})
 
 		let sm = m_of_cm (zgemm q.s (zdiagm expLt q.s'))
 
@@ -190,7 +190,7 @@ module Diag = struct
 			| None ->
 				q.memoized_to_Pt <- Some (Tools.weakly_memoize (real_to_Pt q))
 				to_Pt q t
-				
+
 	let to_Pt_gc q = q.memoized_to_Pt <- None
 
 	let dPt_dt ~q ~t =
@@ -207,22 +207,22 @@ module Diag = struct
 						for c = 0 to n-1 do
 							x := !x + (s.{a,c} * l.{c} * (exp (l.{c} * ct)) * s'.{c,b})
 						real_of_complex !x
-		
+
 	(* TODO in richly parameterized models, dQ_dx is likely to be sparse. *)
 	let dPt_dQ_dx ~q ~t ~dQ_dx =
 		let n,_ = Gsl_matrix.dims q.q
 		let dQt_dx = cm_of_m (Gsl_matrix.of_arrays dQ_dx)
-		
+
 		if Gsl_matrix_complex.dims dQt_dx <> Gsl_matrix.dims q.q then
 			invalid_arg "CamlPaml.Q.dP_dx: wrong dimension of dQ_dx"
-		
+
 		let ct = { Complex.re = t; Complex.im = 0. }
 		let exp = Complex.exp
 		let (( * ),(-),(/)) = Complex.mul, Complex.sub, Complex.div
-		
+
 		(* combos 1,3 or 2 (alone) -- 1,3 matches P&S? *)
 		Gsl_matrix_complex.scale dQt_dx ct (* 1 *)
-		
+
 		let f = Gsl_matrix_complex.create n n
 		for i = 0 to pred n do
 			for j = 0 to pred n do
@@ -230,7 +230,7 @@ module Diag = struct
 					f.{i,j} <- exp (q.l.{i} * ct) (* * ct *) (* 2 *)
 				else
 					f.{i,j} <- (exp (q.l.{i} * ct) - exp (q.l.{j} * ct)) / ((q.l.{i} - q.l.{j}) * ct (* 3 *))
-		
+
 		(* ehh not being too gentle with the allocator/GC here *)
 		Gsl_matrix_complex.mul_elements f (zgemm q.s' (zgemm dQt_dx q.s))
 		Gsl_matrix.to_arrays (m_of_cm (zgemm q.s (zgemm f q.s')))
@@ -242,7 +242,7 @@ let logm (m:Gsl_matrix.matrix) =
 	let s' = zinvm s
 	for i = 0 to n-1 do
 		l.{i} <- Complex.log l.{i}
-	
+
 	m_of_cm (zgemm s (zdiagm l s'))
 
 (* Correction of a square matrix with zero row-sums but potentially negative off-diagonal entries into a valid rate matrix. As suggested by Israel, Rosenthal & Wei (2001) *)

@@ -52,7 +52,7 @@ class multi_maximizer f df init =
 
 	let exn = ref None
 	let n = Array.length init
-	
+
 	let f' ~x =
 		if !exn = None then
 			try
@@ -67,7 +67,7 @@ class multi_maximizer f df init =
 		if !exn = None then
 			try
 				let dfv = Gsl_vector.of_array (df (Gsl_vector.to_array x))
-				Gsl_vector.scale dfv (-1.) 
+				Gsl_vector.scale dfv (-1.)
 				Gsl_vector.set_zero g
 				Gsl_vector.add g dfv
 			with
@@ -77,12 +77,12 @@ class multi_maximizer f df init =
 		Gsl_fun.multim_df = df';
 		Gsl_fun.multim_fdf = (fun ~x ~g -> let rslt = f' ~x in (if !exn = None then (df' ~x ~g; rslt) else rslt));
 	}
-	
-	
+
+
 	let minimizer = Gsl_multimin.Deriv.make Gsl_multimin.Deriv.VECTOR_BFGS2 n gsl_fdf ~x:(Gsl_vector.of_array init) ~step:1. ~tol:1e-6
-	
+
 	object
-		method maximum () = 
+		method maximum () =
 			let x = Gsl_vector.create n
 			let g = Gsl_vector.create n
 			let opt = 0. -. Gsl_multimin.Deriv.minimum ~x:x ~g:g minimizer
@@ -92,7 +92,7 @@ class multi_maximizer f df init =
 		method iterate () =
 			Gsl_multimin.Deriv.iterate minimizer
 			match !exn with Some ex -> raise ex | None -> ()
-			
+
 let make_multi_maximizer ~f ~df ~init = (new multi_maximizer f df init)
 
 type domain = Real | Pos | Neg | NonPos | NonNeg | Probability

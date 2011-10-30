@@ -24,7 +24,7 @@ let infer_siblings parents children =
 					assert false
 			else
 				(-1)
-						
+
 let copy t = { t with labels = Array.copy t.labels; branches = Array.copy t.branches }
 let size t = Array.length t.parents
 let root t = (size t)-1
@@ -58,13 +58,13 @@ let of_newick ?(default_branch=nan) nt =
 	let bitch () = invalid_arg "CamlPaml.T.of_newick: input is not a rooted, bifurcating tree"
 	let n = Newick.size nt
 	if n < 3 || (n mod 2 = 0) then bitch ()
-	
+
 	let labels = Array.make n ""
 	let parents = Array.make n (-1)
 	let children = Array.make n (-1,-1)
 	let branches = Array.make n default_branch
-	
-			
+
+
 	let rec find_leaves = function
 		| (Newick.Node ([],_,_)) as leaf -> [leaf]
 		| Newick.Node (l :: r :: [],lbl,bl) -> find_leaves l @ find_leaves r
@@ -72,7 +72,7 @@ let of_newick ?(default_branch=nan) nt =
 	let leaves = Array.of_list (find_leaves nt)
 	let nl = Array.length leaves
 	assert (nl = (n+1)/2)
-	
+
 	let which_leaf leaf =
 		let j = ref 0
 		try
@@ -81,13 +81,13 @@ let of_newick ?(default_branch=nan) nt =
 		with
 			| Invalid_argument _ -> assert false
 		!j
-	
+
 	let fresh_i =
 		let i = ref (nl-1)
 		fun () ->
 			incr i
 			!i
-	
+
 	let rec fill = function
 		| (Newick.Node ([],lbl,bl)) as leaf ->
 			let i = which_leaf leaf
@@ -105,12 +105,12 @@ let of_newick ?(default_branch=nan) nt =
 			children.(i) <- (lc,rc)
 			i
 		| _ -> bitch ()
-	
+
 	let root = fill nt
 	assert (root = n-1)
-	
+
 	{ labels = labels; parents = parents; branches = branches; children = children; siblings = infer_siblings parents children }
-	
+
 let to_newick ?(branches=false) t =
 	let branch i =
 		if branches then

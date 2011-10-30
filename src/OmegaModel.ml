@@ -29,7 +29,7 @@ let pi_exprs =
 
 		let f1 = Div ((if i1=3 then Val 1.0 else (Var (3+i1))),
 			          (Add(Var 3,(Add(Var 4,(Add(Var  5,Val 1.0)))))))
-		let f2 = Div ((if i2=3 then Val 1.0 else (Var (6+i2))), 
+		let f2 = Div ((if i2=3 then Val 1.0 else (Var (6+i2))),
 			          (Add(Var 6,(Add(Var 7,(Add(Var  8,Val 1.0)))))))
 		let f3 = Div ((if i3=3 then Val 1.0 else (Var (9+i3))),
 			          (Add(Var 9,(Add(Var 10,(Add(Var 11,Val 1.0)))))))
@@ -38,7 +38,7 @@ let pi_exprs =
 	                Mul(Sub(Val 1.0, sigma),
 					    Add(sc ('T','A','A'),Add(sc ('T','A','G'),sc ('T','G','A')))))
 	Array.init Codon.dim (fun i -> Div (sc (Codon.of_index i),denom))
-	
+
 let q_p14n =
 	let sq =
 		Array.init Codon.dim
@@ -59,17 +59,17 @@ let q_p14n =
 								| 'C','T'
 								| 'T','C' -> true
 								| _ -> false
-								
+
 							let kappa_part = if transition then kappa else Val 1.
 							let omega_part =
 								if not (Codon.is_stop iii || Codon.is_stop jjj) && aai <> aaj then
 									omega
 								else
-									Val 1. 
-							
+									Val 1.
+
 							simplify (Mul (pi_exprs.(j),Mul(kappa_part,omega_part)))
 						else
-							Val 0.							
+							Val 0.
 	PM.P14n.fill_q_diagonal sq
 	sq
 
@@ -113,12 +113,12 @@ let update_f3x4 inst leaves =
 						inc 2 (Code.DNA.index n3)
 					| _ -> ()
 	let qs = PM.P14n.q_settings inst
-	
+
 	(*
 	TODO: Pond et al. Correcting the Bias of Empirical Frequency Parameter Estimators in Codon
 	      Models. PLoS One 5:e11230 (2010).
 	*)
-	
+
 	qs.(3) <- float counts.(0).(0) /. float counts.(0).(3)
 	qs.(4) <- float counts.(0).(1) /. float counts.(0).(3)
 	qs.(5) <- float counts.(0).(2) /. float counts.(0).(3)
@@ -126,13 +126,13 @@ let update_f3x4 inst leaves =
 	qs.(6) <- float counts.(1).(0) /. float counts.(1).(3)
 	qs.(7) <- float counts.(1).(1) /. float counts.(1).(3)
 	qs.(8) <- float counts.(1).(2) /. float counts.(1).(3)
-	
+
 	qs.(9) <- float counts.(2).(0) /. float counts.(2).(3)
 	qs.(10) <- float counts.(2).(1) /. float counts.(2).(3)
 	qs.(11) <- float counts.(2).(2) /. float counts.(2).(3)
-	
+
 	PM.P14n.update ~q_settings:qs inst
-	
+
 (* Calculate log-probability of the alignment *)
 let lpr_leaves inst leaves =
 	let workspace = PhyloLik.new_workspace (PM.tree (PM.P14n.model inst)) Codon.dim
@@ -189,27 +189,27 @@ let kr_map leaves inst =
 
 let sf = sprintf "%.2f"
 let db x = sprintf "%.2f" (10. *. x /. log 10.)
-	
+
 let score ?(omega_H1=0.2) ?(sigma_H1=0.01) tree_shape leaves =
 	(* H0: omega=1, sigma=1, MLE(kappa), MLE(rho) *)
 	let inst0, lpr_H0 = kr_map leaves (update_f3x4 (new_instance ~kappa:2.5 tree_shape) leaves)
 	let qs0 = PM.P14n.q_settings inst0
 	let ts0 = PM.P14n.tree_settings inst0
-	
+
 	(* H1: omega=0.2, sigma=0.01, MLE(kappa), MLE(rho) *)
-	let inst1, lpr_H1 =	
+	let inst1, lpr_H1 =
 		let qs = PM.P14n.q_settings inst0
 		qs.(1) <- omega_H1
 		qs.(2) <- sigma_H1
 		kr_map leaves (PM.P14n.update ~q_settings:qs inst0)
 	let qs1 = PM.P14n.q_settings inst1
 	let ts1 = PM.P14n.tree_settings inst1
-	
+
 	let diag = ["L(H0)", (db lpr_H0);
 	            "rho_H0", (sf ts0.(0)); "kappa_H0", (sf qs0.(0));
 	            "omega_H0", (sf qs0.(1)); "sigma_H0", (sf qs0.(2));
 	            "L(H1)", (db lpr_H1);
 	            "rho_H1", (sf ts1.(0)); "kappa_H1", (sf qs1.(0));
 	            "omega_H1", (sf qs1.(1)); "sigma_H1", (sf qs1.(2)) ]
-	
+
 	(10. *. (lpr_H1 -. lpr_H0) /. log 10.), diag

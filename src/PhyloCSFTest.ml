@@ -26,11 +26,11 @@ let cmd = OptParser.parse_argv opt_parser
 
 if List.length cmd < 2 then
 	OptParser.usage opt_parser ()
-	exit (-1) 
+	exit (-1)
 
 let fn_exe = List.nth cmd 0
 let fp_params = List.nth cmd 1
-	
+
 (******************************************************************************)
 
 let load_parameters () =
@@ -46,7 +46,7 @@ let load_parameters () =
 	let s2, pi2 = ECM.import_parameters fn_ecm_nc
 	let model = PhyloCSFModel.make s1 pi1 s2 pi2 t
 	nt, t, model
-	
+
 let alignment_column_producer model_instance =
 	let m = PhyloModel.P14n.model model_instance
 	let rec next () =
@@ -61,17 +61,17 @@ let alignment_column_producer model_instance =
 					String.of_list [n1; n2; n3]
 	let rec enum () = Enum.make ~next:next ~count:(fun () -> raise Enum.Infinite_enum) ~clone:(fun () -> enum ())
 	enum ()
-	
+
 let full_alignment_columns { PhyloCSFModel.coding_model = coding_model; noncoding_model = noncoding_model } =
 	let leaves = T.leaves (PhyloModel.tree (PhyloModel.P14n.model coding_model))
-	
+
 	let sites5' = if Opt.get max_utr > 0 then (Opt.get min_utr) + (Random.int (Opt.get max_utr - Opt.get min_utr)) else 0
 	let sites3' = if Opt.get max_utr > 0 then (Opt.get min_utr) + (Random.int (Opt.get max_utr - Opt.get min_utr)) else 0
 	let sitesCDS = if Opt.get max_cds > 0 then (Opt.get min_cds) + (Random.int (Opt.get max_cds - Opt.get min_cds)) else 0
-	
+
 	let utr_producer = alignment_column_producer noncoding_model
 	let cds_producer = alignment_column_producer coding_model
-	
+
 	let site1 =
 		if Opt.get max_utr = 0 then
 			None
@@ -81,10 +81,10 @@ let full_alignment_columns { PhyloCSFModel.coding_model = coding_model; noncodin
 				let trim = Random.int 3
 				site |> Array.iteri (fun i s -> site.(i) <- String.sub s 0 trim)
 			Some site
-	
+
 	let atg = Array.make leaves "ATG"
 	let stop = Array.init leaves (fun _ -> match Random.int 3 with 0 -> "TAA" | 1 -> "TAG" | 2 -> "TGA" | _ -> assert false)
-	
+
 	let orf_lo = (match site1 with Some site -> String.length site.(0) | None -> 0) + (sites5' * 3)
 	let orf_hi = orf_lo + 2 + (sitesCDS * 3)
 	printf "\t%d\t%d" orf_lo orf_hi
@@ -105,7 +105,7 @@ let stringify_alignment_columns cols =
 			for i = 0 to rows-1 do
 				Buffer.add_string bufs.(i) col.(i)
 	Array.map Buffer.contents bufs
-	
+
 let maybe_revcomp seqs =
 	if Opt.get randomize_strand && Random.bool () then
 		printf "\t-"
@@ -114,10 +114,10 @@ let maybe_revcomp seqs =
 		printf "\t+"
 		seqs
 
-let mfa headers seqs = 
+let mfa headers seqs =
 	assert (Array.length headers = Array.length seqs)
 	let buf = Buffer.create 1000
-	Array.iter2 
+	Array.iter2
 		fun header seq ->
 			Buffer.add_string buf (sprintf ">%s\n" header)
 			Buffer.add_string buf seq
@@ -125,16 +125,16 @@ let mfa headers seqs =
 		headers
 		seqs
 	buf
-	
+
 let open_phylocsf () =
 	let cmd = sprintf "%s %s" fn_exe fp_params
 	Unix.open_process_out ~cleanup:true cmd
-	
+
 let main () =
 	let _, t, model = load_parameters ()
-	
+
 	let headers = Array.init (T.leaves t) (T.label t)
-	
+
 	while true do
 		printf "\ttruth\t\t\t"
 		let aln = mfa headers (maybe_revcomp (stringify_alignment_columns (full_alignment_columns model)))

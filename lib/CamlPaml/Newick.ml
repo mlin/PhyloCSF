@@ -7,14 +7,14 @@ type t = Node of (t list)*string*branch
 let lbl_bl lbl = function
 	| Some bl -> sprintf "%s:%f" lbl bl
 	| None -> lbl
-		
+
 let rec to_string = function
 	| Node ([],lbl,bl) -> lbl_bl lbl bl
 	| Node (st,lbl,bl) ->
 		sprintf "(%s)%s"
 			String.concat "," (map to_string st)
 			lbl_bl lbl bl
-	
+
 let rec size (Node (st,_,_)) = 1 + fold_left (+) 0 (map size st)
 
 let rec leaves = function
@@ -52,7 +52,7 @@ let reorder compare t =
 let rec total_length' = function
 	| Node (st,_,Some bl) -> bl +. (fold_left (+.) 0. (map total_length' st))
 	| _ -> invalid_arg "CamlPaml.Newick.total_length: unspecified branch length"
-	
+
 let total_length ?(count_root=false) t =
 	if count_root then
 		total_length' t

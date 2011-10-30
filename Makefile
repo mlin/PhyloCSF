@@ -9,7 +9,7 @@ PhyloCSF: CamlPaml
 	cd src; $(MAKE) clean; $(MAKE) $(MFLAGS)
 	cp src/_build/PhyloCSF.native PhyloCSF.$(ARCH)
 
-CamlPaml: 
+CamlPaml:
 	cd lib/CamlPaml; $(MAKE) $(MFLAGS) reinstall
 
 clean:

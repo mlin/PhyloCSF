@@ -37,7 +37,7 @@ val subtree : (string -> bool) -> t -> t option
 *)
 val reorder : (string -> string -> int) -> t -> t
 
-(** Compute the total branch length of the tree. 
+(** Compute the total branch length of the tree.
 	@param count_root (default false) if true, include the branch length of the topmost node of the tree. If [count_root=false], this branch length is allowed to be unspecified.
 	@raise Invalid_argument if the length of any branch is unspecified *)
 val total_length : ?count_root:bool -> t -> float
