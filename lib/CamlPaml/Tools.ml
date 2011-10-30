@@ -18,7 +18,7 @@ let weakly_memoize f =
 				Hashtbl.replace tbl x box
 				Gc.finalise (fun _ -> Hashtbl.remove tbl x) y
 				y
-				
+
 let random_chooser ?checksum weights =
 	let n = Array.length weights
 	let cum = Array.copy weights

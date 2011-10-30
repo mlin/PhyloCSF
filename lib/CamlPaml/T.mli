@@ -34,7 +34,7 @@ val put_label : t -> int -> string -> unit
 @param branch_tol Greatest allowable difference between branch lengths. Default 0, and can be set to infinity to ignore branch lengths.
 *)
 val congruent : ?tol:float -> labels:bool -> branches:bool -> t -> t -> bool
-	
+
 (** The conversion will only succeed for rooted, bifurcating Newick trees.*)
 val of_newick : ?default_branch:float -> Newick.t -> t
 val to_newick : ?branches:bool -> t -> Newick.t

@@ -14,7 +14,7 @@ open Expr
 module PM = PhyloModel
 module Codon = Code.Codon64
 
-let re_sp = Str.regexp " "	
+let re_sp = Str.regexp " "
 let import_parameters fn_ecm =
 	let lines = Array.of_enum (File.lines_of fn_ecm)
 	let raw_sij =
@@ -22,7 +22,7 @@ let import_parameters fn_ecm =
 			fun line ->
 				Array.of_list
 					List.map Option.get
-						List.map 
+						List.map
 							fun s ->
 								let s = String.trim s
 								if s <> "" then Some (float_of_string s) else None
@@ -52,7 +52,7 @@ let import_parameters fn_ecm =
 						let s = String.trim s
 						if s <> "" then Some (float_of_string s) else None
 					Str.split re_sp lines.(Codon.dim)
-					
+
 	let codons =
 		Array.of_list
 			List.map Option.get
@@ -68,5 +68,5 @@ let import_parameters fn_ecm =
 
 	if Array.length codons <> Codon.dim then failwith "ECM.import_parameters: incorrect codon order"
 	codons |> Array.iteri (fun i s -> if Codon.index (s.[0],s.[1],s.[2]) <> i then failwith "ECM.import_parameters: incorrect codon order")
-	
+
 	sij, ecm_freqs

@@ -50,7 +50,7 @@ let cmd = OptParser.parse_argv opt_parser
 if List.length cmd < 1 then
 	OptParser.usage opt_parser ()
 	exit (-1)
-	
+
 let paramset = List.hd cmd
 let fns_input = List.tl cmd
 
@@ -58,7 +58,7 @@ if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
 	eprintf "--allowRefGaps should not be used with --orf\n"
 	OptParser.usage opt_parser ()
 	exit (-1)
-	
+
 if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
 	eprintf "Warning: --orf with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
 	flush stderr
@@ -123,11 +123,11 @@ let find_orfs ?(ofs=0) dna =
 	let codon pos = Char.uppercase dna.[pos], Char.uppercase dna.[pos+1], Char.uppercase dna.[pos+2]
 	let is_start pos = match codon pos with 'A','T','G' -> true | _ -> false
 	let is_stop pos = match codon pos with 'T','A','A' | 'T','A','G' | 'T','G','A' -> true | _ -> false
-	
+
 	let len = String.length dna
 	let orfs = ref []
 	let starts = ref []
-	
+
 	for codon_lo = ofs to len-3 do
 		if (codon_lo-ofs) mod 3 = 0 then
 			let codon_hi = codon_lo+2
@@ -140,14 +140,14 @@ let find_orfs ?(ofs=0) dna =
 							assert ((codon_hi-start+1) mod 3 = 0)
 							orfs := (start,codon_hi) :: !orfs
 				starts := []
-				
+
 	if not atg then
 		(* add stuff that goes off the end of the alignment *)
 		!starts |> List.iter
 			fun start ->
 				let rem = len-start
 				orfs := (start,start+(rem/3)*3-1) :: !orfs
-			
+
 	if Opt.get orf_mode = StopStop3 then
 		(* look at shorter sub-ORFs of each stop-stop ORF *)
 		let all_suborfs =
@@ -161,18 +161,18 @@ let find_orfs ?(ofs=0) dna =
 					if lo3 > lo2 && lo3 > lo then suborfs := (lo3,hi) :: !suborfs
 					!suborfs
 		orfs := List.flatten all_suborfs
-	
+
 	if Opt.get orf_mode = ToFirstStop && !orfs <> [] then
 		let ((firstorflo,_) as firstorf) = List.hd (List.rev !orfs)
 		orfs := if firstorflo = ofs then [firstorf] else []
-			
-	
+
+
 	!orfs |> List.rev |> List.enum |> filter
 		fun (lo,hi) ->
 			assert ((hi-lo+1) mod 3 = 0)
 			assert ((lo-ofs) mod 3 = 0)
 			(hi-lo+1)/3 >= Opt.get min_codons
-	
+
 let candidate_regions dna rcdna =
 	if Opt.get orf_mode = AsIs then
 		let hi = String.length dna - 1
@@ -196,7 +196,7 @@ let candidate_regions dna rcdna =
 
 let pleaves ?(lo=0) ?hi t leaf_ord aln =
 	let hi = match hi with Some x -> x | None -> String.length aln.(0) - 1
-	
+
 	(* construct enumeration of leaf probability vectors *)
 	let rec enum starting_pos =
 		let pos = ref starting_pos
@@ -254,14 +254,14 @@ let translate dna =
 		else
 			pp.[i] <- '?'
 	pp
-	
+
 let process_alignment (nt,t,evaluator) fn =
 	try
 		(* load alignment from file *)
 		let lines = if fn = "" then IO.lines_of stdin else File.lines_of fn
 		let (species,aln) = maybe_remove_ref_gaps (input_mfa lines)
 		let aln = Array.map (String.map u2t) aln
-		
+
 		(* sanity checks *)
 		if not (Opt.get allow_ref_gaps) && aln.(0) |> String.enum |> exists ((=) '-') then
 			failwith "the reference sequence (first alignment row) must be ungapped"
@@ -277,12 +277,12 @@ let process_alignment (nt,t,evaluator) fn =
 
 		(* generate list of candidate regions within the alignment *)
 		let rgns = candidate_regions aln.(0) rc_aln.(0)
-		
+
 		try
 			if Enum.is_empty rgns then
 				assert (Opt.get orf_mode <> AsIs)
 				failwith "no sufficiently long ORFs found"
-			
+
 			(* evaluate each candidate region *)
 			let rgns_scores =
 				rgns |> Enum.filter_map
@@ -328,7 +328,7 @@ let process_alignment (nt,t,evaluator) fn =
 					printf "\t#"
 					foreach (List.enum diag) (fun (k,v) -> printf " %s=%s" k v)
 				printf "\n"
-						
+
 			if Opt.get print_orfs then
 				Enum.clone rgns_scores |> iter (report_score "orf_score(decibans)")
 			reduce max rgns_scores |> report_score (if Opt.get orf_mode <> AsIs || Opt.get reading_frame <> One then "max_score(decibans)" else "score(decibans)")
@@ -345,7 +345,7 @@ let process_alignment (nt,t,evaluator) fn =
 				flush stderr
 			exit (-1)
 	flush stdout
-	
+
 (******************************************************************************)
 
 (* parse a key<tab>value\n file format *)
@@ -377,7 +377,7 @@ let initialize_strategy () =
 				paramset ^ suffix
 		if required && not (Sys.file_exists fn) then failwith (sprintf "could not find required parameter file %s" fn)
 		fn
-	
+
 	let fn_tree = paramfile ".nh"
 	let nt = File.with_file_in fn_tree (fun input -> NewickParser.parse NewickLexer.token (Lexing.from_input input))
 
@@ -391,12 +391,12 @@ let initialize_strategy () =
 				| _ -> failwith "specify at least two available --species"
 
 	let t = T.of_newick snt
-	
+
 	let evaluator =
 		match Opt.get strategy with
 			| PhyloCSF substrategy ->
 				let fn_ecm_c = paramfile "_coding.ECM"
-				let fn_ecm_nc = paramfile "_noncoding.ECM"	
+				let fn_ecm_nc = paramfile "_noncoding.ECM"
 
 				let s1, pi1 = ECM.import_parameters fn_ecm_c
 				let s2, pi2 = ECM.import_parameters fn_ecm_nc
@@ -409,7 +409,7 @@ let initialize_strategy () =
 						leaves
 			| OmegaTest ->
 				let fn_config = paramfile ~required:false "_omega"
-				
+
 				let omega_H1, sigma_H1 =
 					if Sys.file_exists fn_config then
 						try
@@ -419,13 +419,13 @@ let initialize_strategy () =
 							| exn -> failwith (sprintf "configuration file %s exists but does not specify valid omega_H1 and sigma_H1 values" fn_config)
 					else
 						None, None
-			
+
 				fun leaves -> (OmegaModel.score ?omega_H1 ?sigma_H1 t leaves)
 	nt, t, evaluator
-	
+
 let main () =
 	let strategy = initialize_strategy ()
-	
+
 	let fns_alignments =
 		if Opt.get filenames then
 			if fns_input = [] then
@@ -442,7 +442,7 @@ let main () =
 			Enum.singleton ""
 		else
 			List.enum fns_input
-		
+
 	foreach fns_alignments (process_alignment strategy)
 
 main ()

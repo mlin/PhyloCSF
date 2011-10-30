@@ -53,10 +53,10 @@ module P14n : sig
 		tree_domains : Fit.domain array		(** the domains of all the variables used in the branch length p14ns. Note, variables are NOT shared between rate matrix and tree p14ns. For example [(Expr.Var 3)] in [q_p14n] does not refer to the same variable as [(Expr.Var 3)] in [tree_p14n].*)
 
 	}
-	
+
 	(** convenience function, sets each [Q.(i).(i)] to minus the sum of all [Q.(i).(j)] for [j <> i]. The resulting expression will have [O(n)] terms, so if you know a more compact way to compute this entry, it would be better to specify it explicitly.*)
 	val fill_q_diagonal : q_p14n -> unit
-	
+
 	(** in an instance of a p14n we have settings for the variables, thus determining a fully parameterized model *)
 	type instance
 
@@ -67,10 +67,10 @@ module P14n : sig
 	val p14n : instance -> model_p14n
 	val q_settings : instance -> float array
 	val tree_settings : instance -> float array
-	
+
 	(** return a copy of the instance with a subset of the settings replaced (possibly reusing computed information in the original instance that is not affected by the changed parameters) *)
 	val update : ?prior:(float array) -> ?q_settings:(float array) -> ?tree_settings:(float array) -> instance -> instance
-	
-	
-	
-		
+
+
+
+

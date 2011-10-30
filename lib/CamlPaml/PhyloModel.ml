@@ -15,14 +15,14 @@ let make ?prior t qms =
 	for i = 0 to T.root t - 1 do
 		if T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make"
 	let pms = Array.init (T.size t - 1) (fun br -> Q.Diag.to_Pt qms.(br) (T.branch t br))
-	let prior = match prior with	
+	let prior = match prior with
 		| Some pr -> Array.copy pr
 		| None ->
 			let q = qms.(snd (T.children t (T.root t)))
 			if not (Q.Diag.reversible q) then invalid_arg "CamlPaml.PhyloModel.make"
 			Q.Diag.equilibrium q
 	{ tree = T.copy t; qms = qms; pms = pms; prior = prior }
-	
+
 let tree { tree = t } = T.copy t
 let q { qms = qms } br = qms.(br)
 let p { pms = pms } br = pms.(br) (* Array.map Array.copy pms.(br) *)
@@ -45,7 +45,7 @@ let simulate m =
 		for i = T.root t - 1 downto 0 do
 			let p = a.(T.parent t i)
 			a.(i) <- branch_choosers.(i).(p) ()
-		a	
+		a
 
 module P14n = struct
 	type q_p14n = Expr.t array array
@@ -66,7 +66,7 @@ module P14n = struct
 		q_settings : float array;
 		tree_settings : float array
 	}
-	
+
 	let fill_q_diagonal q =
 		let n = Array.length q
 		for i = 0 to n-1 do
@@ -79,26 +79,26 @@ module P14n = struct
 
 	let instantiate_tree shape exprs domains settings =
 		Array.iteri (fun i domain -> if not (Fit.check_domain domain settings.(i)) then invalid_arg ("CamlPaml.P14n.instantiate_tree: domain violation on variable " ^ (string_of_int i))) domains
-		
+
 		let tree = T.copy shape
 		for br = 0 to T.root tree - 1 do
 			T.put_branch tree br (Expr.eval exprs.(br) settings)
 		tree
-		
+
 	let instantiate_q exprs scale_expr domains settings =
 		Array.iteri (fun i domain -> if not (Fit.check_domain domain settings.(i)) then invalid_arg ("CamlPaml.P14n.instantiate_q: domain violation on variable " ^ (string_of_int i))) domains
 
 		let scale = Expr.eval scale_expr settings
-		
+
 		if scale <= 0. then
 			failwith "CamlPaml.P14n.instantiate_q: Q scale evaluated to a non-positive value"
-		
+
 		let qm = exprs |> Array.map (Array.map (fun expr -> Expr.eval expr settings /. scale))
-											
+
 		let q = Q.Diag.of_Q qm
-		
+
 		q
-		
+
 	let instantiate_qs p14ns scale_p14ns domains settings =
 		let previous = ref [] (* memoized results from previous branches...I'm assuming the number of independent rate matrix parameterizations to be sublinear in the size of the tree, otherwise this memoization is quadratic... *)
 		Array.init (Array.length p14ns)
@@ -121,7 +121,7 @@ module P14n = struct
 		let qms = instantiate_qs p14n.q_p14ns p14n.q_scale_p14ns p14n.q_domains q_settings
 		let tree = instantiate_tree p14n.tree_shape p14n.tree_p14n p14n.tree_domains tree_settings
 		{ model = make ?prior tree qms; p14n = p14n; q_settings = Array.copy q_settings; tree_settings = Array.copy tree_settings }
-			
+
 	let update ?prior ?q_settings ?tree_settings inst =
 		let pms_changed = ref false
 		let newq = match q_settings with
@@ -141,10 +141,10 @@ module P14n = struct
 		{ inst with model = model;
 					q_settings = (match q_settings with Some set -> Array.copy set | None -> inst.q_settings);
 					tree_settings = (match tree_settings with Some set -> Array.copy set | None -> inst.tree_settings) }
-					
+
 	let model { model = model } = model
 	let p14n { p14n = p14n } = p14n
 	let q_settings { q_settings = q_settings } = Array.copy q_settings
 	let tree_settings { tree_settings = tree_settings } = Array.copy tree_settings
-	
+
 

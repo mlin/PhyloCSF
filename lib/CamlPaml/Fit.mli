@@ -6,10 +6,10 @@
 class type maximizer = object
 	(** current estimate of the locally maximizing setting, [argmax_x f(x)] *)
 	method maximum : unit -> float
-	
+
 	(** current lower and upper bounds on [x] around the local maximum *)
 	method interval : unit -> (float*float)
-	
+
 	(** perform the next iteration *)
 	method iterate : unit -> unit
 
@@ -36,10 +36,10 @@ exception Out_of_range of float
 class type multi_maximizer = object
 	(** current estimate of the maximum [f(x)], the corresponding location [x], and the gradient [df(x)] *)
 	method maximum : unit -> float*(float array)*(float array)
-	
+
 	(** perform the next iteration *)
 	method iterate : unit -> unit
-	
+
 (** create a maximizer for the function [f(x)] given its gradient [df]
 	@param init initial point from which to begin the gardient ascent
 *)

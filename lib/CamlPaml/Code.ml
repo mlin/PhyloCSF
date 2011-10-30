@@ -10,18 +10,18 @@ module type S = sig
 
 module DNA = struct
 	type t = char
-	
+
 	let dim = 4
-	
+
 	let compare = compare
-	
+
 	let is = function
 		| 'A' | 'a'
 		| 'C' | 'c'
 		| 'G' | 'g'
 		| 'T' | 't' -> true
 		| _ -> false
-	
+
 	let index = function
 		| 'A' | 'a' -> 0
 		| 'C' | 'c' -> 1
@@ -66,13 +66,13 @@ module AA = struct
 	type t = char
 	let dim = 20
 	let compare = compare
-	
+
 	let aa2twenty = [|
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
-      
+
       -1; 0;-1; 1; 2; 3; 4; 5; 6; 7;-1; 8; 9;10;11;-1;
       12;13;14;15;16;-1;17;18;-1;19;-1;-1;-1;-1;-1;-1;
 
@@ -86,39 +86,39 @@ module AA = struct
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;
       -1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1;-1 |]
-	  
-	  
+
+
 	let twenty2aa = ord aa2twenty
-	
+
 	let is c =
 		let ci = Char.code c
 		ci <= (Array.length aa2twenty) && aa2twenty.(ci) >= 0
-		
+
 	let index c = aa2twenty.(Char.code c)
-	
+
 	let of_index ci = Char.chr (twenty2aa ci)
-	
+
 	let blosum62_matrix = [|
 	   4; 0;-2;-1;  -2; 0;-2;-1;  -1;-1;-1;-2;  -1;-1;-1;-1;   0; 0;-3;-2;
        0; 9;-3;-4;  -2;-3;-3;-1;  -3;-1;-1;-3;  -3;-3;-3;-1;  -1;-1;-2;-2;
        -2;-3; 6; 2;  -3;-1;-1;-3;  -1;-4;-3; 1;  -1; 0;-2; 0;  -1;-3;-4;-3;
        -1;-4; 2; 5;  -3;-2; 0;-3;   1;-3;-2; 0;  -1; 2; 0; 0;  -1;-2;-3;-2;
-			      		    		  
+
        -2;-2;-3;-3;   6;-3;-1; 0;  -3; 0; 0;-3;  -4;-3;-3;-2;  -2;-1; 1; 3;
        0;-3;-1;-2;  -3; 6;-2;-4;  -2;-4;-3; 0;  -2;-2;-2; 0;  -2;-3;-2;-3;
        -2;-3;-1; 0;  -1;-2; 8;-3;  -1;-3;-2; 1;  -2; 0; 0;-1;  -2;-3;-2; 2;
        -1;-1;-3;-3;   0;-4;-3; 4;  -3; 2; 1;-3;  -3;-3;-3;-2;  -1; 3;-3;-1;
-			      		    		  
+
        -1;-3;-1; 1;  -3;-2;-1;-3;   5;-2;-1; 0;  -1; 1; 2; 0;  -1;-2;-3;-2;
        -1;-1;-4;-3;   0;-4;-3; 2;  -2; 4; 2;-3;  -3;-1;-1;-1;  -1; 1;-2;-1;
        -1;-1;-3;-2;   0;-3;-2; 1;  -1; 2; 5;-2;  -2; 0;-1;-1;  -1; 1;-1;-1;
        -2;-3; 1; 0;  -3; 0; 1;-3;   0;-3;-2; 6;  -2; 0; 0; 1;   0;-3;-4;-2;
-       
+
        -1;-3;-1;-1;  -4;-2;-2;-3;  -1;-3;-2;-2;   7;-1;-2;-1;  -1;-2;-4;-3;
        -1;-3; 0; 2;  -3;-2; 0;-3;   1;-1; 0; 0;  -1; 5; 1; 0;  -1;-2;-2;-1;
        -1;-3;-2; 0;  -3;-2; 0;-3;   2;-1;-1; 0;  -2; 1; 5;-1;  -1;-3;-3;-2;
        -1;-1; 0; 0;  -2; 0;-1;-2;   0;-1;-1; 1;  -1; 0;-1; 4;   1;-2;-3;-2;
-			      		    		  
+
        0;-1;-1;-1;  -2;-2;-2;-1;  -1;-1;-1; 0;  -1;-1;-1; 1;   5; 0;-2;-2;
        0;-1;-3;-2;  -1;-3;-3; 3;  -2; 1; 1;-3;  -2;-2;-3;-2;   0; 4;-3;-1;
        -3;-2;-4;-3;   1;-2;-2;-3;  -3;-2;-1;-4;  -4;-2;-3;-3;  -2;-3;11; 2;
@@ -128,8 +128,8 @@ module AA = struct
 		let idx1 = aa2twenty.(Char.code aa1)
 		let idx2 = aa2twenty.(Char.code aa2)
 		blosum62_matrix.(20*idx1+idx2)
-	
-		
+
+
 module Codon64 = struct
 	type t = DNA.t*DNA.t*DNA.t
 	let dim = 64
@@ -146,22 +146,22 @@ module Codon64 = struct
 		let ones = (idx - 16 * sixteens - 4 * fours)
 		(DNA.of_index sixteens,
     	 DNA.of_index fours,
-    	 DNA.of_index ones) 
-		 
+    	 DNA.of_index ones)
+
 	let stop1 = index ('T','A','A')
 	let stop2 = index ('T','A','G')
 	let stop3 = index ('T','G','A')
-	
+
 	let is_stop_index ci = ci = stop1 || ci = stop2 || ci = stop3
-	
+
 	let is_stop c = is_stop_index (index c)
-	
-	let translation_table = [|   
+
+	let translation_table = [|
      'K';'N';'K';'N';
 	 'T';'T';'T';'T';
 	 'R';'S';'R';'S';
 	 'I';'I';'M';'I';
-      
+
 	 'Q';'H';'Q';'H';
 	 'P';'P';'P';'P';
 	 'R';'R';'R';'R';
@@ -171,7 +171,7 @@ module Codon64 = struct
 	 'A';'A';'A';'A';
 	 'G';'G';'G';'G';
 	 'V';'V';'V';'V';
-  
+
 	 '*';'Y';'*';'Y';
 	 'S';'S';'S';'S';
 	 '*';'C';'W';'C';
@@ -192,9 +192,9 @@ module Codon61 = struct
 
 	let index (n1,n2,n3) = lookup (Char.uppercase n1,Char.uppercase n2,Char.uppercase n3)
 	let of_index idx = order.(idx)
-	
+
 	let compare c1 c2 = compare (index c1) (index c2)
-	
+
 	let translate c = Codon1.translate c
 	let translate_index idx = translate (of_index idx)
 module Codon2 = Codon61

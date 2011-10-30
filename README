@@ -6,7 +6,7 @@
 |         /_/   /_/ /_/\__, /_/ \____/\____//____/_/                  |
 |                      /____/                                         |
 |                                                                     |
-|                 http://compbio.mit.edu/PhyloCSF                     | 
+|                 http://compbio.mit.edu/PhyloCSF                     |
 +---------------------------------------------------------------------+
 
 
@@ -19,7 +19,7 @@ precompiled binaries for Linux and Mac OS X on our website.
 
 DEPENDENCIES
 
-- GNU Scientific Library 
+- GNU Scientific Library
 * Objective Caml 3.11+, with native code compiler
 * findlib
 * OCaml Batteries Included 1.20+

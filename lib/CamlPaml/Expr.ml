@@ -33,14 +33,14 @@ let rec fixed_point f init =
 		fixed_point f rslt
 
 let rec simplify_step = function
-	| Add (Val 0.,x) | Add (x,Val 0.) 
+	| Add (Val 0.,x) | Add (x,Val 0.)
 	| Sub (x,Val 0.)
 	| Mul (Val 1.,x) | Mul(x,Val 1.)
 	| Div (x,Val 1.) -> simplify_step x
-	
+
 	| Sub (e,e') when e=e' -> Val 0.
 	| Mul (Val 0.,x) | Mul(x,Val 0.) -> Val 0.
-	
+
 	| Div (e,e') when e=e' -> Val 1.
 
 	| Add (Val l,Val r) -> Val (l +. r)
@@ -52,9 +52,9 @@ let rec simplify_step = function
 	| Sub (l,r) -> Sub (simplify_step l, simplify_step r)
 	| Mul (l,r) -> Mul (simplify_step l, simplify_step r)
 	| Div (l,r) -> Div (simplify_step l, simplify_step r)
-	
+
 	| x -> x
-	
+
 let simplify = fixed_point simplify_step
 
 let to_string ?(fmt=string_of_float) x =
