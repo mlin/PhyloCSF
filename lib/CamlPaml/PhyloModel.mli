@@ -20,10 +20,11 @@ val p : t -> int -> P.matrix (** retrieve the {{:P}P matrix} for a specific bran
 val prior : t -> float array
 
 (** Simulate evolution according to the model. First, a root character is chosen according to the prior. Then, character substitutions are performed down the tree from the root according to the substitution probabilities determined by the rate matrices and branch lengths.
+@param root (optional) a specific character to place at the root; chosen from the prior if not specified.
 @param a (optional) a preallocated array of length at least [T.size (tree model)], which will be overwritten and returned, to save memory allocation.
 @return the assignment of characters to each node in the tree, in the order of the tree nodes (leaves first)
 *)
-val simulate : t -> (?a:(int array) -> unit -> int array)
+val simulate : t -> (?root:int -> ?a:(int array) -> unit -> int array)
 
 (** Prepare likelihood calculations for the given configuration of extant characters (leaves).
 

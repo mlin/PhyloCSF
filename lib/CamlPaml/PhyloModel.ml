@@ -13,7 +13,7 @@ let make ?prior t qms =
 	let qms = if Array.length qms = 1 then Array.make (T.size t - 1) qms.(0) else Array.copy qms
 	if Array.length qms <> T.size t - 1 then invalid_arg "CamlPaml.PhyloModel.make"
 	for i = 0 to T.root t - 1 do
-		if T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make"
+		if Q.Diag.dim qms.(i) <> Q.Diag.dim qms.(0) || T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make"
 	let pms = Array.init (T.size t - 1) (fun br -> Q.Diag.to_Pt qms.(br) (T.branch t br))
 	let prior = match prior with	
 		| Some pr -> Array.copy pr
@@ -35,13 +35,16 @@ let checksum = 1., 1e-6
 let simulate m =
 	let branch_choosers = m.pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl_matrix.to_arrays pm)))
 	let root_chooser = Tools.random_chooser ~checksum:checksum m.prior
-	fun ?a () ->
+	fun ?root ?a () ->
 		let t = m.tree
 		let a = match a with
 			| Some a -> a
 			| None -> Array.make (T.size t) (-1)
 
-		a.(T.root t) <- root_chooser ()
+		a.(T.root t) <- (match root with
+		                   | None -> root_chooser ()
+		                   | Some ch when ch >= 0 && ch < Q.Diag.dim m.qms.(0) -> ch
+		                   | _ -> invalid_arg "CamlPaml.PhyloModel.simulate (root)")
 		for i = T.root t - 1 downto 0 do
 			let p = a.(T.parent t i)
 			a.(i) <- branch_choosers.(i).(p) ()
