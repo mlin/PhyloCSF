@@ -10,9 +10,9 @@ Gsl_error.init ()
 module SMap = Map.StringMap
 module SSet = Set.StringSet
 module Codon = CamlPaml.Code.Codon64
-type strategy = PhyloCSF of [`MaxLik | `FixedLik] | OmegaTest
+type strategy = PhyloCSF of [`MaxLik | `FixedLik] | OmegaTest | Nop
 type reading_frame = One | Three | Six
-type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop
+type orf_mode = AsIs | ATGStop | StopStop | StopStop3 | ToFirstStop | FromLastStop | ToOrFromStop
 
 let opt_parser = OptParser.make ~usage:"%prog parameter_set [file1 file2 ...]\ninput will be read from stdin if no filenames are given." ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
@@ -24,6 +24,7 @@ let strategy = (opt ~l:"strategy" ~h:"evaluation strategy (default mle)"
                                | "mle" -> PhyloCSF `MaxLik
                                | "fixed" -> PhyloCSF `FixedLik
                                | "omega" -> OmegaTest
+							   | "nop" -> Nop
                                | x -> invalid_arg x)
                        (fun _ s -> sprintf "invalid strategy %s" s)))
 
@@ -35,7 +36,7 @@ let desired_species = opt ~group ~l:"species" ~h:"hint that only this subset of 
 
 let group = OptParser.add_group opt_parser "searching mulitple reading frames and ORFs"
 let reading_frame = opt ~group ~l:"frames" ~s:'f' ~h:"how many reading frames to search (default 1)" (Opt.value_option "1|3|6" (Some One) (function "1" -> One | "3" -> Three | "6" -> Six | x -> invalid_arg x) (fun _ s -> sprintf "invalid reading frame %s" s))
-let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
+let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3|ToFirstStop|FromLastStop|ToOrFromStop" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | "fromlaststop" -> FromLastStop | "toorfromstop" -> ToOrFromStop| x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
 let print_orfs = opt ~group ~l:"allScores" ~h:"report scores of all regions evaluated, not just the max" (StdOpt.store_true ())
 
@@ -165,8 +166,17 @@ let find_orfs ?(ofs=0) dna =
 	if Opt.get orf_mode = ToFirstStop && !orfs <> [] then
 		let ((firstorflo,_) as firstorf) = List.hd (List.rev !orfs)
 		orfs := if firstorflo = ofs then [firstorf] else []
-			
-	
+
+	if Opt.get orf_mode = FromLastStop && !orfs <> [] then
+		let ((_,lastorfhi) as lastorf) = List.hd !orfs
+		orfs := if len - lastorfhi <= 3 then [lastorf] else []
+		
+	if Opt.get orf_mode = ToOrFromStop && !orfs <> [] then
+		let ((firstorflo,_) as firstorf) = List.hd (List.rev !orfs)
+		let ((_,lastorfhi) as lastorf) = List.hd !orfs
+		orfs := if firstorflo = ofs then [firstorf] else []		
+		orfs := if len - lastorfhi <= 3 && firstorf <> lastorf then lastorf :: !orfs else !orfs
+		
 	!orfs |> List.rev |> List.enum |> filter
 		fun (lo,hi) ->
 			assert ((hi-lo+1) mod 3 = 0)
@@ -421,7 +431,8 @@ let initialize_strategy () =
 						None, None
 			
 				fun leaves -> (OmegaModel.score ?omega_H1 ?sigma_H1 t leaves)
-	nt, t, evaluator
+			| Nop -> fun leaves -> 0.0, []
+	snt, t, evaluator
 	
 let main () =
 	let strategy = initialize_strategy ()
