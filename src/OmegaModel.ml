@@ -169,20 +169,22 @@ let kr_map leaves inst =
 		let inst_kappa = PM.P14n.update ~q_settings:qs inst
 		(lpr_kappa kappa +. lpr_leaves inst_kappa leaves), inst_kappa
 	let round inst =
-		let _, inst_rho, _ =
+		let _, (_, inst_rho) =
 			PhyloCSFModel.maximize_lpr
 				~init:(PM.P14n.tree_settings inst).(0)
 				~lo:0.001
 				~hi:10.
 				~accuracy:0.01
 				f_rho inst
-		let _, inst_kappa, lpr =
+				fst
+		let _, (lpr, inst_kappa) =
 			PhyloCSFModel.maximize_lpr
 				~init:(PM.P14n.q_settings inst).(0)
 				~lo:1.0
 				~hi:10.
 				~accuracy:0.01
 				f_kappa inst_rho
+				fst
 		inst_kappa, lpr
 	(* 3 rounds, cyclic coordinate ascent *)
 	round (fst (round (fst (round inst))))
@@ -212,4 +214,6 @@ let score ?(omega_H1=0.2) ?(sigma_H1=0.01) tree_shape leaves =
 	            "rho_H1", (sf ts1.(0)); "kappa_H1", (sf qs1.(0));
 	            "omega_H1", (sf qs1.(1)); "sigma_H1", (sf qs1.(2)) ]
 	
-	(10. *. (lpr_H1 -. lpr_H0) /. log 10.), diag
+	{ PhyloCSFModel.score = (10. *. (lpr_H1 -. lpr_H0) /. log 10.);
+	  anc_comp_score = nan;
+	  diagnostics = diag }

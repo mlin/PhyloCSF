@@ -40,6 +40,14 @@ let make_p14n s tree_shape =
 	{ PM.P14n.q_p14ns = [| q_exprs |]; q_scale_p14ns = [| qscale q_exprs |]; q_domains = [||];
 		tree_shape = (T.copy tree_shape); tree_p14n = tree_exprs; tree_domains = [|Fit.Pos|] }
 
+(* dot product... *)
+let dot v1 v2 =
+	if (Array.length v1 <> Array.length v2) then invalid_arg "dot"
+	let tot = ref 0.
+	for i = 0 to Array.length v1 - 1 do
+		tot := !tot +. v1.(i) *. v2.(i)
+	!tot
+
 (* Instantiate a codon model *)
 let new_instance ?(tree_scale=1.) s pi tree_shape =
 	let p14n = make_p14n s tree_shape
@@ -47,22 +55,35 @@ let new_instance ?(tree_scale=1.) s pi tree_shape =
 	let tree_settings = [| tree_scale |]
 	PM.P14n.instantiate p14n ~prior:pi ~q_settings:q_settings ~tree_settings:tree_settings
 
-(* Calculate log-probability of the alignment *)
+type lpr_leaves = {
+	lpr_leaves : float;
+	elpr_anc : float;
+	inst : PM.P14n.instance
+}
+
+(* Calculate log-probability of the alignment
+   Simultaneously, calculate expected log-probability of the ancestral sequence
+*)
 let lpr_leaves inst leaves t =
 	let ts = PM.P14n.tree_settings inst
 	ts.(0) <- t
 	let inst = PM.P14n.update ~tree_settings:ts inst
 	let workspace = PhyloLik.new_workspace (PM.tree (PM.P14n.model inst)) Codon.dim
-	let lik = ref 0.
+	let lpr = ref 0.
+	
+	let anc_lprior = Array.map log (PM.prior (PM.P14n.model inst))
+	let elpr_anc = ref 0.
 	leaves |> Array.iter
 		fun lvs ->
-			let lvslik = PhyloLik.likelihood (PM.prepare_lik ~workspace:workspace (PM.P14n.model inst) lvs)
-			lik := !lik +. log lvslik
-	!lik, inst
+			let info = PM.prepare_lik ~workspace:workspace (PM.P14n.model inst) lvs
+			lpr := !lpr +. log (PhyloLik.likelihood info)
+			let pr_root = PhyloLik.node_posterior info (T.root (PM.tree (PM.P14n.model inst)))
+			elpr_anc := !elpr_anc +. dot pr_root anc_lprior
+	{ lpr_leaves = !lpr; elpr_anc = !elpr_anc; inst }
 	
-let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f =
-	let good_init = Fit.find_init ~maxtries:250 ~logspace:true ~init:init ~lo:lo ~hi:hi ~f:(fun x -> fst (f x)) ()
-	let maximizer = Fit.make_maximizer ~f:(fun x -> fst (f x)) ~lo:lo ~hi:hi ~init:good_init
+let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f g =
+	let good_init = Fit.find_init ~maxtries:250 ~logspace:true ~init:init ~lo:lo ~hi:hi ~f:(fun x -> g (f x)) ()
+	let maximizer = Fit.make_maximizer ~f:(fun x -> g (f x)) ~lo:lo ~hi:hi ~init:good_init
 
 	let go = ref true
 	while !go do
@@ -72,9 +93,7 @@ let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f =
 		go := ((ub -. lb) /. x) > accuracy
 
 	let x = maximizer#maximum ()
-
-	let fx, inst = f x
-	x, inst, fx
+	x, f x
 
 (*  Complete PhyloCSF model, with coding and non-coding ECMs *)
 type model = {
@@ -88,19 +107,30 @@ let make s1 pi1 s2 pi2 tree_shape =
 	{ coding_model = coding_model; noncoding_model = noncoding_model }
 
 let sf = sprintf "%.2f"
-let db x = sprintf "%.2f" (10. *. x /. log 10.)
+let db x = (10. *. x /. log 10.)
+let dbs x = sprintf "%.2f" (db x)
+
+type score = {
+  score : float;
+  anc_comp_score : float;
+  diagnostics: (string*string) list;
+}
 
 let llr_FixedLik t model leaves =
-	let lpr_c, inst_c = lpr_leaves model.coding_model leaves t
-	let lpr_n, inst_n = lpr_leaves model.noncoding_model leaves t
-	let diag = ["rho",(sf t); "L(C)",(db lpr_c);"L(NC)",(db lpr_n)]
-	lpr_c -. lpr_n, diag
+	let { lpr_leaves = lpr_c; elpr_anc = elpr_anc_c } = lpr_leaves model.coding_model leaves t
+	let { lpr_leaves = lpr_n; elpr_anc = elpr_anc_n} = lpr_leaves model.noncoding_model leaves t
+	let diag = ["rho",(sf t); "L(C)",(dbs lpr_c);"L(NC)",(dbs lpr_n)]
+	{ score = db (lpr_c -. lpr_n);
+	  anc_comp_score = db (elpr_anc_c -. elpr_anc_n);
+	  diagnostics = diag }
 	
 let llr_MaxLik ?init model leaves =
-	let rho_c, inst_c, lpr_c = maximize_lpr ?init (lpr_leaves model.coding_model leaves)
-	let rho_n, inst_n, lpr_n = maximize_lpr ?init (lpr_leaves model.noncoding_model leaves)
-	let diag = (match init with Some w0 -> ["rho_0", (sf w0)] | None -> []) @ [ "rho_C",(sf rho_c); "rho_N", (sf rho_n); "L(C)", (db lpr_c); "L(NC)", (db lpr_n)]
-	lpr_c -. lpr_n, diag
+	let rho_c, { lpr_leaves = lpr_c; elpr_anc = elpr_anc_c } = maximize_lpr ?init (lpr_leaves model.coding_model leaves) (fun { lpr_leaves } -> lpr_leaves)
+	let rho_n, { lpr_leaves = lpr_n; elpr_anc = elpr_anc_n } = maximize_lpr ?init (lpr_leaves model.noncoding_model leaves) (fun { lpr_leaves } -> lpr_leaves)
+	let diag = (match init with Some w0 -> ["rho_0", (sf w0)] | None -> []) @ [ "rho_C",(sf rho_c); "rho_N", (sf rho_n); "L(C)", (dbs lpr_c); "L(NC)", (dbs lpr_n)]
+	{ score = db (lpr_c -. lpr_n);
+	  anc_comp_score = db (elpr_anc_c -. elpr_anc_n);
+	  diagnostics = diag }
 
 type strategy =
 	| FixedLik
@@ -110,8 +140,6 @@ let score strategy model leaves =
 	let compute_score = match strategy with
 		| FixedLik -> llr_FixedLik 1.
 		| MaxLik -> llr_MaxLik ~init:1.
-	let score, diag = compute_score model leaves
-	(10. *. score /. (log 10.)), diag
-
+	compute_score model leaves
 
 	

@@ -41,9 +41,10 @@ let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching 
 let print_orfs = opt ~group ~l:"allScores" ~h:"report scores of all regions evaluated, not just the max" (StdOpt.store_true ())
 
 let group = OptParser.add_group opt_parser "output control"
+let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
+let print_anc_comp_score = opt ~group ~l:"ancComp" ~h:"include ancestral sequence composition score in output" (StdOpt.store_true ())
 let print_dna = opt ~group ~l:"dna" ~h:"include DNA sequence in output, the part of the reference (first) sequence whose score is reported" (StdOpt.store_true ())
 let print_aa = opt ~group ~l:"aa" ~h:"include amino acid translation in output" (StdOpt.store_true ())
-let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
 let debug = opt ~l:"debug" ~group ~h:"print extra information about parameters and errors" (StdOpt.store_true ())
 
 let cmd = OptParser.parse_argv opt_parser
@@ -299,8 +300,8 @@ let process_alignment (nt,t,evaluator) fn =
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
-							let score, diag = evaluator aln_leaves
-							Some (score,rc,lo,hi,diag)
+							let rslt = evaluator aln_leaves
+							Some (rslt,rc,lo,hi)
 						with
 							| exn ->
 								(* problem evaluating an individual region within the
@@ -320,8 +321,8 @@ let process_alignment (nt,t,evaluator) fn =
 
 			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
 
-			let report_score ty (score,rc,lo,hi,diag) =
-				printf "%s\t%s\t%.4f" (fn2id fn) ty score
+			let report_score ty (rslt,rc,lo,hi) =
+				printf "%s\t%s\t%.4f" (fn2id fn) ty rslt.PhyloCSFModel.score
 				if Opt.get reading_frame <> One || Opt.get orf_mode <> AsIs then
 					printf "\t%d\t%d" lo hi
 				if Opt.get reading_frame = Six then
@@ -329,6 +330,8 @@ let process_alignment (nt,t,evaluator) fn =
 				if Opt.get print_bls then
 					let rgn_bls = bls nt (if rc then rc_aln else aln) which_row lo hi
 					printf "\t%.4f" rgn_bls
+				if Opt.get print_anc_comp_score then
+					printf "\t%.4f" rslt.PhyloCSFModel.anc_comp_score
 				let refdna = String.sub (if rc then rc_aln.(0) else aln.(0)) lo (hi-lo+1)
 				if Opt.get print_dna then
 					printf "\t%s" refdna
@@ -336,7 +339,7 @@ let process_alignment (nt,t,evaluator) fn =
 					printf "\t%s" (translate refdna)
 				if Opt.get debug then
 					printf "\t#"
-					foreach (List.enum diag) (fun (k,v) -> printf " %s=%s" k v)
+					foreach (List.enum rslt.PhyloCSFModel.diagnostics) (fun (k,v) -> printf " %s=%s" k v)
 				printf "\n"
 						
 			if Opt.get print_orfs then
@@ -431,7 +434,7 @@ let initialize_strategy () =
 						None, None
 			
 				fun leaves -> (OmegaModel.score ?omega_H1 ?sigma_H1 t leaves)
-			| Nop -> fun leaves -> 0.0, []
+			| Nop -> fun leaves -> { PhyloCSFModel.score = 0.0; anc_comp_score = 0.0; diagnostics = [] }
 	snt, t, evaluator
 	
 let main () =
