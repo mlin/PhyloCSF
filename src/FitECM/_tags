@@ -1,0 +1,3 @@
+true: debug, pkg_batteries, pkg_CamlPaml
+<**/*.ml> or <**/*.mli>: pp(ocaml+twt)
+<Test*>: pkg_oUnit
