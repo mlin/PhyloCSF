@@ -96,8 +96,7 @@ let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f g =
 		let x = maximizer#maximum ()
 		x, f x
 	else
-		let x = good_init
-		x, f x
+		good_init, f good_init
 
 (*  Complete PhyloCSF model, with coding and non-coding ECMs *)
 type model = {
