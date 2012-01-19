@@ -41,11 +41,9 @@ let find_init ?(maxtries=1000) ?(logspace=false) ~f ~init ~lo ~hi () =
 		incr i
 	if !i = maxtries then
 		if flo > fhi then
-			raise (Out_of_range lo)
-		else if fhi > flo then
-			raise (Out_of_range hi)
+			x := lo
 		else
-			failwith "find_init"
+			x := hi
 	!x
 
 class multi_maximizer f df init =

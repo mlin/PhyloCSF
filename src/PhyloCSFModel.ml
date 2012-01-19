@@ -83,17 +83,21 @@ let lpr_leaves inst leaves t =
 	
 let maximize_lpr ?(init=1.) ?(lo=1e-2) ?(hi=10.) ?(accuracy=0.01) f g =
 	let good_init = Fit.find_init ~maxtries:250 ~logspace:true ~init:init ~lo:lo ~hi:hi ~f:(fun x -> g (f x)) ()
-	let maximizer = Fit.make_maximizer ~f:(fun x -> g (f x)) ~lo:lo ~hi:hi ~init:good_init
+	if lo < good_init && good_init < hi then
+		let maximizer = Fit.make_maximizer ~f:(fun x -> g (f x)) ~lo:lo ~hi:hi ~init:good_init
 
-	let go = ref true
-	while !go do
-		maximizer#iterate ()
+		let go = ref true
+		while !go do
+			maximizer#iterate ()
+			let x = maximizer#maximum ()
+			let lb,ub = maximizer#interval ()
+			go := ((ub -. lb) /. x) > accuracy
+
 		let x = maximizer#maximum ()
-		let lb,ub = maximizer#interval ()
-		go := ((ub -. lb) /. x) > accuracy
-
-	let x = maximizer#maximum ()
-	x, f x
+		x, f x
+	else
+		let x = good_init
+		x, f x
 
 (*  Complete PhyloCSF model, with coding and non-coding ECMs *)
 type model = {
