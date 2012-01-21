@@ -32,6 +32,7 @@ let find_init ?(maxtries=1000) ?(logspace=false) ~f ~init ~lo ~hi () =
 	let x = ref init
 	let fx = ref (f init)
 	let i = ref 0
+	Random.init 0
 	while !i < maxtries && (!fx <= flo || !fx <= fhi) do
 		if logspace then
 			x := exp (log lo +. Random.float width)
