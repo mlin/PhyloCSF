@@ -11,24 +11,26 @@
 
 BINARY DISTRIBUTION
 
-Please see our web site for instructions on how to use this
-software. This distribution includes executables for 32-bit Linux,
-64-bit Linux, and 32-bit Mac OS X, as well as the parameter files
-needed to run them. PhyloCSF should be started using the ./PhyloCSF
-script, which will configure some environment variables and select the
-proper executable (which are stored in the bin/ subdirectory).
+Please see our web site for instructions on how to use this software.
+This distribution includes a 64-bit Linux executable packaged using
+CDE (http://www.stanford.edu/~pgbovine/cde.html), and the 29mammals and
+12flies parameters. PhyloCSF should be started using the ./PhyloCSF
+script, which will extract and run the executable from the CDE package.
 
-PGP signatures for each executable by the maintainer (Mike Lin
-<mlin@mlin.net>) are also included, detached in *.sig files in the bin/
-subdirectory. The public key (D1AE42EA) is copied below and can be
-obtained from:
+A PGP signature for the CDE package by the maintainer (Mike Lin
+<mlin@mlin.net) is also included, detached in a .sig file. The public
+key (D1AE42EA) is copied below and can be obtained from:
 
 http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0xBA028A9FD1AE42EA
 or
 http://www.mlin.net/pgp
 
-Of course, from a security standpoint you may wish to authenticate
-this key in other ways.
+Of course, from a security standpoint you may wish to authenticate this
+key in other ways. Once you import the public key, the command to
+verify the signature using GnuPG is:
+
+gpg --verify cde-package.Linux.x86_64.tar.sig cde-package.Linux.x86_64.tar
+
 
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1.4.10 (Darwin)

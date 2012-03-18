@@ -6,12 +6,11 @@ case $0 in
   * ) export PHYLOCSF_BASE=`dirname $0`
 esac
 
-EXE="$PHYLOCSF_BASE/bin/PhyloCSF.$ARCH"
-if [ -f $EXE ]
-then
-  export CAMOMILE_DIR="$PHYLOCSF_BASE/share/camomile"
-  chmod u+x $EXE
-  $EXE $@
+if [ -f "$PHYLOCSF_BASE/cde-package.$ARCH.tar" ]; then
+  if [ ! -d "$PHYLOCSF_BASE/cde-package.$ARCH" ]; then
+    tar x -C $PHYLOCSF_BASE -f $PHYLOCSF_BASE/cde-package.$ARCH.tar
+  fi
+  $PHYLOCSF_BASE/cde-package.$ARCH/cde-exec /home/mlin/src/PhyloCSF/PhyloCSF.$ARCH $@
 else
   echo "No executable available for architecture: $ARCH"
 fi
