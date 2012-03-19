@@ -12,13 +12,14 @@
 BINARY DISTRIBUTION
 
 Please see our web site for instructions on how to use this software.
-This distribution includes a 64-bit Linux executable packaged using
-CDE (http://www.stanford.edu/~pgbovine/cde.html), and the 29mammals and
-12flies parameters. PhyloCSF should be started using the ./PhyloCSF
-script, which will extract and run the executable from the CDE package.
+This distribution includes 32-bit and 64-bit Linux executables packaged
+using CDE (http://www.stanford.edu/~pgbovine/cde.html), as well as the
+29mammals and 12flies parameter files. PhyloCSF should be started using
+the ./PhyloCSF script, which will extract and run the executable from
+the appropriate CDE package for your achitecture.
 
-A PGP signature for the CDE package by the maintainer (Mike Lin
-<mlin@mlin.net) is also included, detached in a .sig file. The public
+PGP signatures for the CDE packages by the maintainer (Mike Lin
+<mlin@mlin.net) are also included, detached in .sig files. The public
 key (D1AE42EA) is copied below and can be obtained from:
 
 http://pgp.mit.edu:11371/pks/lookup?op=vindex&search=0xBA028A9FD1AE42EA
