@@ -9,35 +9,78 @@
 |                 http://compbio.mit.edu/PhyloCSF                     | 
 +---------------------------------------------------------------------+
 
-
 SOURCE DISTRIBUTION
 
-Compiling PhyloCSF from source may be difficult for most users,
-because it requires an Objective Caml toolchain that's probably not
-already present on your system. For this reason, we provide
-precompiled binaries for Linux and Mac OS X on our website.
+Please see our web site for more information about PhyloCSF. Compiling
+this software from source may be difficult for most users, because it
+requires an Objective Caml toolchain that's probably not already
+present on your system. For this reason, we provide digitally-signed
+32-bit and 64-bit Linux executables on our web site.
 
-DEPENDENCIES
+The source distribution is divided into a library, CamlPaml, containing
+generic infrastructure for phylogenetic rate models, and a program
+implementing the PhyloCSF-specific models and driver program. With
+additional development, the CamlPaml library will eventually be
+released as a separate entity, but for now it is just part of this
+distribution.
+
+Here are the steps to build the source:
+
+[1A] Install various dependencies (Ubuntu 11.10+)
+
+Install these packages using apt-get:
+ocaml-findlib libocamlgsl-ocaml-dev libbatteries-ocaml-dev make
+
+[1B] Install various dependencies (other Linux, Mac OS X)
 
 - GNU Scientific Library 
 * Objective Caml 3.11+, with native code compiler
-* findlib
+* OCaml findlib
 * OCaml Batteries Included 1.20+
 * ocamlgsl 0.60+
-- ocaml+twt 0.92+ http://people.csail.mit.edu/mikelin/ocaml+twt/
 
 * These can be set up using GODI: http://godi.camlcity.org/
 
-The source distribution is divided into a library, CamlPaml,
-containing generic infrastructure for phylogenetic rate models, and a
-program implementing the PhyloCSF-specific models and driver
-program. With additional development, the CamlPaml library will
-eventually be released as a separate entity, but for now it is just
-part of this distribution.
+[2] Configure OCaml findlib
 
-COMPILING
+If you installed findlib (OCaml's package manager) using the Ubuntu
+packages, or any other method that led to system-wide installation, you
+must set some environment variables to make it use a directory to which
+you have write access. (Alternatively, you can complete the subsequent
+steps as root, e.g. using sudo)
 
-Assuming the above dependencies are satisfied, just run `make` in this
-directory. This will build and install the CamlPaml library, then
-compile the PhyloCSF executable and copy it to PhyloCSF.ARCH in this
-directory, where e.g. ARCH = Linux.x86_64.
+  mkdir -p $HOME/opt/lib/ocaml                     # or whatever
+  export OCAMLPATH=$HOME/opt/lib/ocaml:$OCAMLPATH
+  export OCAMLFIND_DESTDIR=$OCAMLPATH
+
+To verify your configuration, run
+
+  ocamlfind printconf
+
+"Packages will be installed in" should be a directory you can write to,
+and that same directory should appear in "Search path".
+
+[3] Install ocaml+twt
+
+The code is written in a dialect of OCaml for which you must install a
+preprocessor from: http://people.csail.mit.edu/mikelin/ocaml+twt/
+Download the tarball, extract it, and run
+
+  make install INSTALLDIR=$HOME/directory/in/your/PATH
+    -or-
+  sudo make install
+
+If you obtained this PhyloCSF source distribution by cloning the git
+repository, ocaml+twt is available as a submodule. You can run
+
+  git submodule init
+  git submodule update
+  cd twt
+
+and then one of the above 'make install' commands.
+
+[4] Compile PhyloCSF
+
+Now just run 'make' in this directory. This will build and install the
+CamlPaml library, then compile the PhyloCSF executable and copy it to
+PhyloCSF.ARCH in this directory, where e.g. ARCH = Linux.x86_64.
