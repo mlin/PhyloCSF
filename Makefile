@@ -1,9 +1,10 @@
 all: PhyloCSF
 
-.PHONY: PhyloCSF CamlPaml clean
+.PHONY: PhyloCSF CamlPaml cde-package CDE clean
 
-ARCH := `uname`.`uname -m`
-export ARCH
+ARCH := $(shell uname).$(shell uname -m)
+PHYLOCSF_BASE := $(shell pwd)
+export PHYLOCSF_BASE
 
 PhyloCSF: CamlPaml
 	cd src; $(MAKE) clean; $(MAKE) $(MFLAGS)
@@ -12,7 +13,19 @@ PhyloCSF: CamlPaml
 CamlPaml: 
 	cd lib/CamlPaml; $(MAKE) $(MFLAGS) reinstall
 
+cde-package: PhyloCSF CDE
+	CDE/cde ./PhyloCSF.$(ARCH) 12flies PhyloCSF_Examples/tal-AA.fa 
+	CDE/cde ./PhyloCSF.$(ARCH) 29mammals PhyloCSF_Examples/ALDH2.exon5.fa --frames=3
+	#CDE/cde ./PhyloCSF.$(ARCH) 29mammals PhyloCSF_Examples/Aldh2.mRNA.fa --frames=3 --removeRefGaps --aa
+	mv cde-package cde-package.$(ARCH)
+	tar -cf cde-package.$(ARCH).tar cde-package.$(ARCH)
+
+CDE:
+	cd CDE && make
+
 clean:
 	cd lib/CamlPaml; $(MAKE) clean
 	cd src; $(MAKE) clean
 	rm -f PhyloCSF.*
+	rm -rf cde-package*
+	cd CDE && make clean || true
