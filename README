@@ -49,8 +49,8 @@ must set some environment variables to make it use a directory to which
 you have write access. (Alternatively, you can complete the subsequent
 steps as root, e.g. using sudo)
 
-  mkdir -p $HOME/opt/lib/ocaml                     # or whatever
-  export OCAMLPATH=$HOME/opt/lib/ocaml:$OCAMLPATH
+  export OCAMLPATH=$HOME/opt/lib/ocaml             # or whatever
+  mkdir -p $OCAMLPATH
   export OCAMLFIND_DESTDIR=$OCAMLPATH
 
 To verify your configuration, run
