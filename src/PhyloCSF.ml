@@ -342,6 +342,7 @@ let process_alignment (nt,t,evaluator) fn =
 					foreach (List.enum rslt.PhyloCSFModel.diagnostics) (fun (k,v) -> printf " %s=%s" k v)
 				printf "\n"
 						
+			Enum.force rgns_scores
 			if Opt.get print_orfs then
 				Enum.clone rgns_scores |> iter (report_score "orf_score(decibans)")
 			reduce max rgns_scores |> report_score (if Opt.get orf_mode <> AsIs || Opt.get reading_frame <> One then "max_score(decibans)" else "score(decibans)")
