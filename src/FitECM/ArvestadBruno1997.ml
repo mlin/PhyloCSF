@@ -103,3 +103,32 @@ let est_eigenvalues sms lv rv =
 					distances |> Array.map (fun d -> d.(i) *. d.(m-1)) |> Array.fold_left (+.) 0.0 |> ( *. ) (1.0 /. denom) 
 				else 1.0
 
+(* Normalize rate matrix to unity mean rate of replacement at equilibrium *)
+let normalize_Q pi q =
+	let (m,n) = Gsl_matrix.dims q
+	assert (m=n)
+	let qdiag = Gsl_vector.of_array (Array.init m (fun i -> q.{i,i}))
+
+	let z = 1.0 /. (Gsl_blas.dot pi qdiag)
+	(* 'sign' of eigenvectors is arbitrary *)
+	Gsl_matrix.scale q (if z>0. then 0. -. z else z)
+
+(* putting it all together *)
+let est_Q pi sms =
+	let n = Gsl_vector.length pi
+	sms |> Array.iter (fun sm -> assert (Gsl_matrix.dims sm = (n,n)))
+
+	let p = Gsl_matrix.create ~init:0. n n
+	sms |> Array.iter (fun sm -> Gsl_matrix.add p sm)
+
+	let symP = symmetrizeP pi p
+
+	let lv, rv = est_eigenvectors pi symP
+	let ev = est_eigenvalues sms lv rv
+
+	(* reconstruct Q according to the spectral thm Q = rv'*diag(ev)*lv
+	   http://www.maths.lancs.ac.uk/~gilbert/m306c/node4.html *)
+	Gsl_matrix.transpose_in_place rv
+	let q = mm rv (mm (diag ev) lv)
+	normalize_Q pi q
+	q

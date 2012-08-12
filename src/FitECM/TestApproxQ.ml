@@ -224,7 +224,11 @@ module Example = struct
 
 		assert (veq (Gsl_vector.of_array ev) (Gsl_vector.of_array ev'))
 
-	let tests = ["symP" >:: test_symP; "est_eigenvectors" >:: test_est_eigenvectors; "est_eigenvalues" >:: test_est_eigenvalues]
+	let test_est_Q () =
+		let q' = ArvestadBruno1997.est_Q (Gsl_vector.of_array pi) (Array.map Gsl_matrix.of_arrays sms) 
+		assert (meq (Gsl_matrix.of_arrays q) q')
+
+	let tests = ["symP" >:: test_symP; "est_eigenvectors" >:: test_est_eigenvectors; "est_eigenvalues" >:: test_est_eigenvalues; "est_Q" >:: test_est_Q]
 
 let all_tests = ("FitECM tests" >:::
 					[
