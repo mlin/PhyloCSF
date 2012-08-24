@@ -37,14 +37,14 @@ ocaml-findlib libocamlgsl-ocaml-dev libbatteries-ocaml-dev make
 * Objective Caml 3.11+, with native code compiler
 * OCaml findlib
 * OCaml Batteries Included 1.20+
-* ocamlgsl 0.60+
+* ocamlgsl 0.60
 
 * These can be set up using GODI: http://godi.camlcity.org/
 
 [2] Configure OCaml findlib
 
 If you installed findlib (OCaml's package manager) using the Ubuntu
-packages, or any other method that led to system-wide installation, you
+packages, or another method that led to system-wide installation, you
 must set some environment variables to make it use a directory to which
 you have write access. (Alternatively, you can complete the subsequent
 steps as root, e.g. using sudo)
@@ -60,26 +60,7 @@ To verify your configuration, run
 "Packages will be installed in" should be a directory you can write to,
 and that same directory should appear in "Search path".
 
-[3] Install ocaml+twt
-
-The code is written in a dialect of OCaml for which you must install a
-preprocessor from: http://people.csail.mit.edu/mikelin/ocaml+twt/
-Download the tarball, extract it, and run
-
-  make install INSTALLDIR=$HOME/directory/in/your/PATH
-    -or-
-  sudo make install
-
-If you obtained this PhyloCSF source distribution by cloning the git
-repository, ocaml+twt is available as a submodule. You can run
-
-  git submodule init
-  git submodule update
-  cd twt
-
-and then one of the above 'make install' commands.
-
-[4] Compile PhyloCSF
+[3] Compile PhyloCSF
 
 Now just run 'make' in this directory. This will build and install the
 CamlPaml library, then compile the PhyloCSF executable and copy it to

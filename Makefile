@@ -1,17 +1,21 @@
 all: PhyloCSF
 
-.PHONY: PhyloCSF CamlPaml cde-package CDE clean
+.PHONY: PhyloCSF CamlPaml twt cde-package CDE clean
 
 ARCH := $(shell uname).$(shell uname -m)
 PHYLOCSF_BASE := $(shell pwd)
 export PHYLOCSF_BASE
 
 PhyloCSF: CamlPaml
-	cd src; $(MAKE) clean; $(MAKE) $(MFLAGS)
+	cd src; $(MAKE) clean; PATH=$(PATH):$(CURDIR)/twt $(MAKE) $(MFLAGS)
 	cp src/_build/PhyloCSF.native PhyloCSF.$(ARCH)
 
-CamlPaml: 
-	cd lib/CamlPaml; $(MAKE) $(MFLAGS) reinstall
+CamlPaml: twt
+	cd lib/CamlPaml; PATH=$(PATH):$(CURDIR)/twt $(MAKE) $(MFLAGS) reinstall
+
+twt:
+	git submodule update --init
+	cd twt && $(MAKE)
 
 cde-package: PhyloCSF CDE
 	rm -rf cde-package cde-package.$(ARCH)
@@ -30,4 +34,5 @@ clean:
 	cd src; $(MAKE) clean
 	rm -f PhyloCSF.*
 	rm -rf cde-package*
+	cd twt && $(MAKE) clean || true
 	cd CDE && $(MAKE) clean || true
