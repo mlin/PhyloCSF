@@ -230,10 +230,66 @@ module Example = struct
 
 	let tests = ["symP" >:: test_symP; "est_eigenvectors" >:: test_est_eigenvectors; "est_eigenvalues" >:: test_est_eigenvalues; "est_Q" >:: test_est_Q]
 
+module RandomData = struct
+	(* Test that the code accurately recovers random rate matrices *)
+
+	open CamlPaml
+
+	(* generate random exchangeabilities *)
+	let random_s n =
+		let s = Array.make_matrix n n 0.
+		for i = 0 to n-1 do
+			for j = i+1 to n-1 do
+				s.(i).(j) <- Random.float 1.0
+				s.(j).(i) <- s.(i).(j)
+		s
+
+	(* generate random frequencies *)
+	let random_pi n =
+		let wts = Array.init n (fun _ -> Random.float 1.0)
+		let z = Array.fold_left (+.) 0. wts
+		Array.map (( *. ) (1.0 /. z)) wts
+
+	(* generate a random n-by-n rate matrix *)
+	let random_Q n =
+		let m = random_s n
+		let pi = random_pi n
+		for i = 0 to n-1 do
+			for j = 0 to n-1 do
+				m.(i).(j) <- pi.(j) *. m.(i).(j)
+			m.(i).(i) <- 0. -. (Array.fold_left (+.) 0. m.(i))
+		Q.validate m
+		Q.Diag.of_Q m
+
+	(* generate k substitution matrices from q, at random distances between 0.2 and 2.0 *)
+	let random_sms k q = Array.init k (fun _ -> Q.Diag.to_Pt q (0.2 +. Random.float 1.8))
+
+	let test_est_Q n k =
+		let q = random_Q n
+		let qm = Q.Diag.to_Q q
+		let pi = Q.Diag.equilibrium q
+		let z = Array.fold_left (+.) 0. (Array.init n (fun i -> 0. -. pi.(i) *. qm.(i).(i)))
+		let q = Q.Diag.scale q (1.0 /. z)
+		let qm = Q.Diag.to_Q q
+
+		let sms = random_sms k q
+		let q' = ArvestadBruno1997.est_Q (Gsl_vector.of_array pi) sms
+
+		assert (meq (Gsl_matrix.of_arrays qm) q')
+
+	let tests = [
+		"4x4/1 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 4 1));
+		"4x4/8 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 4 8));
+		"61x61/1 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 61 1));
+		"61x61/8 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 61 8));
+		"64x64/32 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 64 32))
+	]
+
 let all_tests = ("FitECM tests" >:::
 					[
 						"symmetrizeP" >::: symmetrizeP_tests;
-						"previously worked-out 4x4 example" >::: Example.tests
+						"previously worked-out 4x4 example" >::: Example.tests;
+						"random data" >::: RandomData.tests
 					])
 
 run_test_tt_main all_tests
