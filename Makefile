@@ -14,7 +14,7 @@ CamlPaml: twt
 	cd lib/CamlPaml; PATH=$(PATH):$(CURDIR)/twt $(MAKE) $(MFLAGS) reinstall
 
 twt:
-	git submodule update --init
+	git submodule update --init twt
 	cd twt && $(MAKE)
 
 cde-package: PhyloCSF CDE
@@ -23,10 +23,10 @@ cde-package: PhyloCSF CDE
 	CDE/cde ./PhyloCSF.$(ARCH) 29mammals PhyloCSF_Examples/ALDH2.exon5.fa --frames=3 --allScores
 	CDE/cde ./PhyloCSF.$(ARCH) 29mammals PhyloCSF_Examples/Aldh2.mRNA.fa --strategy=fixed --frames=3 --orf=ATGStop --minCodons=400 --allScores --removeRefGaps --aa
 	mv cde-package cde-package.$(ARCH)
-	tar -cf cde-package.$(ARCH).tar cde-package.$(ARCH)
+	tar -cf cde-package.$(ARCH).tar cde-package.$(ARCH)	
 
 CDE:
-	git submodule update --init
+	git submodule update --init CDE
 	cd CDE && $(MAKE)
 
 clean:

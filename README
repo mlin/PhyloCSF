@@ -33,11 +33,11 @@ ocaml-findlib libocamlgsl-ocaml-dev libbatteries-ocaml-dev make
 
 [1B] Install various dependencies (other Linux, Mac OS X)
 
-- GNU Scientific Library 
 * Objective Caml 3.11+, with native code compiler
 * OCaml findlib
 * OCaml Batteries Included 1.20+
-* ocamlgsl 0.60
+- GNU Scientific Library 
+- ocamlgsl 0.60 http://oandrieu.nerim.net/ocaml/gsl/ocamlgsl-0.6.0.tar.gz
 
 * These can be set up using GODI: http://godi.camlcity.org/
 

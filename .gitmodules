@@ -3,4 +3,4 @@
 	url = git://github.com/mlin/twt.git
 [submodule "CDE"]
 	path = CDE
-	url = git://github.com/pgbovine/CDE.git
+	url = git://github.com/mlin/CDE.git
