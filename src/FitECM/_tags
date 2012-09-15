@@ -1,3 +1,3 @@
-true: debug, pkg_batteries, pkg_CamlPaml, pkg_gsl
+true: debug, pkg_batteries, pkg_CamlPaml, pkg_gsl, pkg_yojson
 <Test*>: pkg_oUnit
 <**/*.ml> or <**/*.mli>: pp(ocaml+twt)
