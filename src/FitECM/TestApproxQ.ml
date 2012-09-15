@@ -267,6 +267,7 @@ module RandomData = struct
 	let test_est_Q n k =
 		let q = random_Q n
 		let qm = Q.Diag.to_Q q
+		assert (Q.Diag.reversible q)
 		let pi = Q.Diag.equilibrium q
 		let z = Array.fold_left (+.) 0. (Array.init n (fun i -> 0. -. pi.(i) *. qm.(i).(i)))
 		let q = Q.Diag.scale q (1.0 /. z)
@@ -285,11 +286,87 @@ module RandomData = struct
 		"64x64/32 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 64 32))
 	]
 
+module Degenerate = struct
+	(* Test that the code has acceptable behavior given degenerate inputs *)
+
+	(* identity substitution matrix *)
+	let ident n =
+		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		Gsl_matrix.add_diagonal sms.(0) 1.0
+		(pi,sms)
+
+	(* near-identity substitution matrix (one slightly nonzero off-diagonal entry in each row) *)
+	let sparse ?(delta=1e-6) n =
+		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		Gsl_matrix.add_diagonal sms.(0) (1. -. delta)
+		for i = 0 to n-1 do
+			sms.(0).{i,(if i < n/2 then i+1 else i-1)} <- delta
+		(pi,sms)
+
+	(* random near-identity substitution matrix (all offdiagonal entries are very small random values) *)
+	let random_sparse ?(delta=1e-6) n =
+		Random.init 0
+		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		for i = 0 to n-1 do
+			let noise = Array.init n (fun j -> if (i <> j) then Random.float delta else 0.)
+			let z = Array.fold_left (+.) 0. noise
+			for j = 0 to n-1 do
+				if i <> j then
+					sms.(0).{i,j} <- noise.(j)
+				else
+					sms.(0).{i,j} <- 1.0 -. z
+		pi,sms
+
+	(* half of off-diagonal entries are zero *)
+	let checkerboard ?(delta=1e-6) n =
+		Random.init 0
+		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		for i = 0 to n-1 do
+			for j = 0 to n-1 do
+				if i <> j then
+					sms.(0).{i,j} <- if (j mod 2 = i mod 2) then delta else 0.
+				else
+					sms.(0).{i,j} <- 1.0 -. (delta *. float (n/2 - 1))
+		pi,sms
+
+	(* assert we either raise Numerical_error or return a valid rate matrix *)
+	let assert_acceptable (pi,sms) () =
+		try
+			let q = ArvestadBruno1997.est_Q pi sms
+			try
+				CamlPaml.Q.validate (Gsl_matrix.to_arrays q)
+			with
+				| (Invalid_argument _) as exn ->
+					ppm q
+					raise exn
+		with
+			| ArvestadBruno1997.Numerical_error _ -> ()
+
+	let tests = [
+		"identity 2x2" >:: (assert_acceptable (ident 2));
+		"identity 4x4" >:: (assert_acceptable (ident 4));
+		"identity 64x64" >:: (assert_acceptable (ident 64));
+		"sparse 2x2" >:: (assert_acceptable (sparse 2));
+		"sparse 4x4" >:: (assert_acceptable (sparse 4));
+		"sparse 64x64" >:: (assert_acceptable (sparse 64));
+		"random sparse 2x2" >:: (assert_acceptable (random_sparse 2));
+		"random sparse 4x4" >:: (assert_acceptable (random_sparse 4));
+		"random sparse 64x64" >:: (assert_acceptable (random_sparse 64));
+		"checkerboard 4x4" >:: (assert_acceptable (checkerboard 4));
+		"checkerboard 64x64" >:: (assert_acceptable (checkerboard 64));
+		"dark checkerboard 64x64" >:: (assert_acceptable (checkerboard ~delta:5e-3 64))
+	]
+
 let all_tests = ("FitECM tests" >:::
 					[
-						"symmetrizeP" >::: symmetrizeP_tests;
-						"previously worked-out 4x4 example" >::: Example.tests;
-						"random data" >::: RandomData.tests
+						"symmetrizeP unit tests" >::: symmetrizeP_tests;
+						"reproduce a previously worked-out 4x4 example" >::: Example.tests;
+						"acceptable behavior on degenerate inputs" >::: Degenerate.tests;
+						"accurately analyze randomly generated inputs" >::: RandomData.tests
 					])
 
 run_test_tt_main all_tests

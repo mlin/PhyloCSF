@@ -8,6 +8,9 @@ Sequences. J Mol Evol 45:696-703
 *)
 
 open Batteries_uni
+open Printf
+
+exception Numerical_error of string
 
 let diag v =
 	let n = Gsl_vector.length v
@@ -84,24 +87,48 @@ let est_eigenvalues sms lv rv =
 
 	(* compute distance estimate for each pair of sequences (sm) and nucleotide (eq. 17) *)
 	let distances =
-		sms |> Array.map
-			fun sm ->
-				let y = Gsl_vector.create ~init:0. m
-				Array.init m
+		sms |> Array.mapi
+			fun which_pair sm ->
+				let y = Gsl_vector.create ~init:0. n
+				Array.init n
 					fun i ->
 						Gsl_blas.(gemv NoTrans ~alpha:1.0 ~a:sm ~x:(Gsl_matrix.row rv i) ~beta:0.0 ~y)
-						log (Gsl_blas.(dot (Gsl_matrix.row lv i) y))
+						let exp_d_i = (Gsl_blas.(dot (Gsl_matrix.row lv i) y))
+						if (exp_d_i <= 0.) then raise (Numerical_error (sprintf "Bad distance estimate for species pair %d, residue %d: log(%e)" which_pair i exp_d_i))
+						(* TODO: test cases to provoke negative exp_d_i
+						http://www2.gsu.edu/~mkteer/npdmatri.html
+						*)
+						log exp_d_i
 
 	(* least-squares estimates of the eigenvalues (eq. 18), arbitrarily assigning the last eigenvalue to 1.
 		TODO make sure that cannot be the zero eigenvalue. *)
-	let denom = distances |> Array.map (fun d -> d.(m-1) *. d.(m-1)) |> Array.fold_left (+.) 0.0
-	assert (denom > 10. *. epsilon_float)
-	Gsl_vector.of_array
-		Array.init m
+	let denom = distances |> Array.map (fun d -> d.(n-1) *. d.(n-1)) |> Array.fold_left (+.) 0.0
+	let denomfpc = classify_float denom
+	if (denomfpc = FP_nan || denomfpc = FP_infinite || denom < 1e-6) then
+		raise (Numerical_error (sprintf "Bad denominator for eigenvalue estimates: %e" denom))
+	let ans =
+		Array.init n
 			fun i ->
-				if i < m-1 then
-					distances |> Array.map (fun d -> d.(i) *. d.(m-1)) |> Array.fold_left (+.) 0.0 |> ( *. ) (1.0 /. denom) 
+				if i < n-1 then
+					distances |> Array.map (fun d -> d.(i) *. d.(n-1)) |> Array.fold_left (+.) 0.0 |> ( *. ) (1.0 /. denom) 
 				else 1.0
+
+	(* check all eigenvalues are nonnegative reals *)
+	let ans_tot = Array.fold_left (+.) 0. ans
+
+	match classify_float ans_tot with
+		| FP_infinite | FP_nan -> raise (Numerical_error "Infinite/undefined eigenvalue estimate")
+		| _ -> ()
+
+	(* round slightly negative eigenvalue estimates up to zero *)
+	ans |> Array.iteri
+		fun i ans_i ->
+			if ans_i < 0. then
+				if (abs_float ans_i >= 1e-3 *. (float n) *. ans_tot) then
+					raise (Numerical_error (sprintf "Eigenvalue estimate %d is too negative: %e" i ans_i))
+				ans.(i) <- 0.
+
+	Gsl_vector.of_array ans
 
 (* Normalize rate matrix to unity mean rate of replacement at equilibrium *)
 let normalize_Q pi q =
@@ -113,10 +140,22 @@ let normalize_Q pi q =
 	(* 'sign' of eigenvectors is arbitrary *)
 	Gsl_matrix.scale q (if z>0. then 0. -. z else z)
 
+	(* round slightly negative off-diagonal entries to zero *)
+	for i = 0 to n-1 do
+		let row_tot = ref 0.
+		for j = 0 to n-1 do if i <> j then row_tot := !row_tot +. q.{i,j}
+
+		for j = 0 to n-1 do
+			if i <> j && q.{i,j} < 0. then
+				if abs_float q.{i,j} >= 1e-3 *. (float n) *. !row_tot then
+					raise (Numerical_error (sprintf "Rate estimate Q[%d,%d] is too negative: %e" i j q.{i,j}))
+				q.{i,j} <- 0.
+
 (* putting it all together *)
 let est_Q pi sms =
 	let n = Gsl_vector.length pi
-	sms |> Array.iter (fun sm -> assert (Gsl_matrix.dims sm = (n,n)))
+	if (n < 2 || Array.length sms = 0) then invalid_arg "ArvestadBruno1997.est_Q"
+	sms |> Array.iter (fun sm -> if (Gsl_matrix.dims sm <> (n,n)) then invalid_arg "ArvestadBruno1997.est_Q")
 
 	let p = Gsl_matrix.create ~init:0. n n
 	sms |> Array.iter (fun sm -> Gsl_matrix.add p sm)
