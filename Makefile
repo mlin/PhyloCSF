@@ -36,5 +36,6 @@ clean:
 	cd src; $(MAKE) clean
 	rm -f PhyloCSF.*
 	rm -rf cde-package*
-	cd twt && $(MAKE) clean || true
-	cd CDE && $(MAKE) clean || true
+
+cleaner: clean
+	rm -rf twt CDE || true
