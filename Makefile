@@ -32,6 +32,7 @@ CDE/cde:
 	cd CDE && $(MAKE)
 	
 clean:
+	(cd CDE; $(MAKE) clean) || true
 	cd lib/CamlPaml; $(MAKE) clean
 	cd src; $(MAKE) clean
 	rm -f PhyloCSF.*
