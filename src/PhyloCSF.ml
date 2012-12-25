@@ -24,7 +24,7 @@ let strategy = (opt ~l:"strategy" ~h:"evaluation strategy (default mle)"
                                | "mle" -> PhyloCSF `MaxLik
                                | "fixed" -> PhyloCSF `FixedLik
                                | "omega" -> OmegaTest
-							   | "nop" -> Nop
+                               | "nop" -> Nop
                                | x -> invalid_arg x)
                        (fun _ s -> sprintf "invalid strategy %s" s)))
 
