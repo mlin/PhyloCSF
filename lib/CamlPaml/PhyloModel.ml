@@ -33,7 +33,7 @@ let prepare_lik ?workspace m leaves = PhyloLik.prepare ?workspace m.tree m.pms m
 let checksum = 1., 1e-6
 
 let simulate m =
-	let branch_choosers = m.pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl_matrix.to_arrays pm)))
+	let branch_choosers = m.pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl.Matrix.to_arrays pm)))
 	let root_chooser = Tools.random_chooser ~checksum:checksum m.prior
 	fun ?root ?a () ->
 		let t = m.tree

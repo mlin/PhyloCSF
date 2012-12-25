@@ -9,8 +9,8 @@ module TestInfer = struct
 	let nt = NewickParser.parse NewickLexer.token (Lexing.from_string "(A,(B,C))")
 	let t = T.of_newick nt
 	
-	let sm0 = Gsl_matrix.of_arrays [| [| 0.8; 0.2; |]; [| 0.25; 0.75 |] |]
-	let sm1 = Gsl_matrix.of_arrays [| [| 0.9; 0.1; |]; [| 0.85; 0.15 |] |]
+	let sm0 = Gsl.Matrix.of_arrays [| [| 0.8; 0.2; |]; [| 0.25; 0.75 |] |]
+	let sm1 = Gsl.Matrix.of_arrays [| [| 0.9; 0.1; |]; [| 0.85; 0.15 |] |]
 	let sms = [| sm0; sm1; sm1; sm1 |]
 	let prior = [| 0.6; 0.4 |]
 

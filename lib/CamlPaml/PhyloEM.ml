@@ -37,7 +37,7 @@ let branch_ell m ss br =
 	let pbr = PM.p m br
 
 	for k = 0 to n-1 do
-		let pbrk = Gsl_matrix.row pbr k
+		let pbrk = Gsl.Matrix.row pbr k
 		let ssbrk = ssbr.(k)
 		for l = 0 to n-1 do
 			let ssbrkl = ssbrk.(l)
@@ -127,7 +127,7 @@ let d_ell_dQ_dxi inst ss i =
 			for a = 0 to n-1 do
 				let ssbra = ssbr.(a)
 				let dPt_dxi_a = dPt_dxi.(a)
-				let pa = Gsl_matrix.row p a
+				let pa = Gsl.Matrix.row p a
 				for b = 0 to n-1 do
 					let ssbrab = ssbra.(b)
 					if ssbrab > 0. then
@@ -156,7 +156,7 @@ let d_ell_dbranch inst br ss =
 		for a = 0 to n-1 do
 			let ssbra = ssbr.(a)
 			let dPt_dt_a = dPt_dt.(a)
-			let pa = Gsl_matrix.row p a
+			let pa = Gsl.Matrix.row p a
 			for b = 0 to n-1 do
 				let ssbrab = ssbra.(b)
 				if ssbrab > 0. then

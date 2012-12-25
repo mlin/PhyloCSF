@@ -7,7 +7,7 @@ open OptParse
 open Printf
 open CamlPaml
 
-Gsl_error.init ()
+Gsl.Error.init ()
 Random.self_init ()
 
 module Codon = CamlPaml.Code.Codon64

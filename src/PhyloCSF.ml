@@ -5,7 +5,7 @@ open OptParse
 open Printf
 open CamlPaml
 
-Gsl_error.init ()
+Gsl.Error.init ()
 
 module SMap = Map.StringMap
 module SSet = Set.StringSet

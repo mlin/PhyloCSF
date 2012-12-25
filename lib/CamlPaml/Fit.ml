@@ -10,13 +10,13 @@ class maximizer f init lo hi =
 			| any ->
 				exn := Some any
 				nan
-	let minimizer = Gsl_min.make Gsl_min.BRENT f' ~min:init ~lo:lo ~up:hi
+	let minimizer = Gsl.Min.make Gsl.Min.BRENT f' ~min:init ~lo:lo ~up:hi
 
 	object
-		method maximum () = Gsl_min.minimum minimizer
-		method interval () = Gsl_min.interval minimizer
+		method maximum () = Gsl.Min.minimum minimizer
+		method interval () = Gsl.Min.interval minimizer
 		method iterate () =
-			Gsl_min.iterate minimizer
+			Gsl.Min.iterate minimizer
 			match !exn with
 				| Some ex -> raise ex
 				| None -> ()
@@ -55,7 +55,7 @@ class multi_maximizer f df init =
 	let f' ~x =
 		if !exn = None then
 			try
-				0. -. f (Gsl_vector.to_array x)
+				0. -. f (Gsl.Vector.to_array x)
 			with
 				| any ->
 					exn := Some any
@@ -65,31 +65,31 @@ class multi_maximizer f df init =
 	let df' ~x ~g =
 		if !exn = None then
 			try
-				let dfv = Gsl_vector.of_array (df (Gsl_vector.to_array x))
-				Gsl_vector.scale dfv (-1.) 
-				Gsl_vector.set_zero g
-				Gsl_vector.add g dfv
+				let dfv = Gsl.Vector.of_array (df (Gsl.Vector.to_array x))
+				Gsl.Vector.scale dfv (-1.) 
+				Gsl.Vector.set_zero g
+				Gsl.Vector.add g dfv
 			with
 				| any -> exn := Some any
 	let gsl_fdf = {
-		Gsl_fun.multim_f = f';
-		Gsl_fun.multim_df = df';
-		Gsl_fun.multim_fdf = (fun ~x ~g -> let rslt = f' ~x in (if !exn = None then (df' ~x ~g; rslt) else rslt));
+		Gsl.Fun.multim_f = f';
+		Gsl.Fun.multim_df = df';
+		Gsl.Fun.multim_fdf = (fun ~x ~g -> let rslt = f' ~x in (if !exn = None then (df' ~x ~g; rslt) else rslt));
 	}
 	
 	
-	let minimizer = Gsl_multimin.Deriv.make Gsl_multimin.Deriv.VECTOR_BFGS2 n gsl_fdf ~x:(Gsl_vector.of_array init) ~step:1. ~tol:1e-6
+	let minimizer = Gsl.Multimin.Deriv.make Gsl.Multimin.Deriv.VECTOR_BFGS2 n gsl_fdf ~x:(Gsl.Vector.of_array init) ~step:1. ~tol:1e-6
 	
 	object
 		method maximum () = 
-			let x = Gsl_vector.create n
-			let g = Gsl_vector.create n
-			let opt = 0. -. Gsl_multimin.Deriv.minimum ~x:x ~g:g minimizer
-			Gsl_vector.scale g (-1.)
+			let x = Gsl.Vector.create n
+			let g = Gsl.Vector.create n
+			let opt = 0. -. Gsl.Multimin.Deriv.minimum ~x:x ~g:g minimizer
+			Gsl.Vector.scale g (-1.)
 
-			opt, (Gsl_vector.to_array x), (Gsl_vector.to_array g)
+			opt, (Gsl.Vector.to_array x), (Gsl.Vector.to_array g)
 		method iterate () =
-			Gsl_multimin.Deriv.iterate minimizer
+			Gsl.Multimin.Deriv.iterate minimizer
 			match !exn with Some ex -> raise ex | None -> ()
 			
 let make_multi_maximizer ~f ~df ~init = (new multi_maximizer f df init)

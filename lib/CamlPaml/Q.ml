@@ -24,29 +24,29 @@ let real_of_complex ?(tol=1e-6) z =
 		failwith (sprintf "CamlPaml.Q.real_of_complex %g+%gi" z.Complex.re z.Complex.im)
 	z.Complex.re
 
-let m_of_cm cm = Gsl_matrix.of_arrays (Array.map (Array.map real_of_complex) (Gsl_matrix_complex.to_arrays cm))
+let m_of_cm cm = Gsl.Matrix.of_arrays (Array.map (Array.map real_of_complex) (Gsl.Matrix_complex.to_arrays cm))
 
-let cm_of_m m = Gsl_matrix_complex.of_arrays (Array.map (Array.map (fun re -> { Complex.re = re; im = 0. })) (Gsl_matrix.to_arrays m))
+let cm_of_m m = Gsl.Matrix_complex.of_arrays (Array.map (Array.map (fun re -> { Complex.re = re; im = 0. })) (Gsl.Matrix.to_arrays m))
 
 (* stupid wrappers *)
 
 let zgemm ?c a b =
-	let m,n = Gsl_matrix_complex.dims a
-	let n',p = Gsl_matrix_complex.dims b
+	let m,n = Gsl.Matrix_complex.dims a
+	let n',p = Gsl.Matrix_complex.dims b
 	if n <> n' then invalid_arg "CamlPaml.Q.zgemm: incompatible dimensions"
 	let c = match c with
 		| Some c -> c
-		| None -> Gsl_matrix_complex.create m p
-	Gsl_blas.Complex.gemm ~ta:Gsl_blas.NoTrans ~tb:Gsl_blas.NoTrans ~alpha:Complex.one ~a:a ~b:b ~beta:Complex.zero ~c:c
+		| None -> Gsl.Matrix_complex.create m p
+	Gsl.Blas.Complex.gemm ~ta:Gsl.Blas.NoTrans ~tb:Gsl.Blas.NoTrans ~alpha:Complex.one ~a:a ~b:b ~beta:Complex.zero ~c:c
 	c
 
 let zdiagm ?c d a =
-	let m = Gsl_vector_complex.length d
-	let (n,p) = Gsl_matrix_complex.dims a
+	let m = Gsl.Vector_complex.length d
+	let (n,p) = Gsl.Matrix_complex.dims a
 	if m <> n then invalid_arg "CamlPaml.Q.diagm: incompatible dimensions"
 	let c = match c with
 		| Some c -> c
-		| None -> Gsl_matrix_complex.create m p
+		| None -> Gsl.Matrix_complex.create m p
 	
 	for i = 0 to m-1 do
 		let d_i = d.{i}
@@ -56,13 +56,13 @@ let zdiagm ?c d a =
 	c
 
 let zinvm m =
-	let n,n' = Gsl_matrix_complex.dims m
+	let n,n' = Gsl.Matrix_complex.dims m
 	if n <> n' then invalid_arg "CamlPaml.Q.zinvm: non-square matrix"
-	let p = Gsl_permut.make n
-	let lu = Gsl_vectmat.cmat_convert (`CM (Gsl_matrix_complex.copy m))
-	ignore (Gsl_linalg.complex_LU_decomp lu p)
-	let m' = Gsl_vectmat.cmat_convert (`CM (Gsl_matrix_complex.create n n))
-	Gsl_linalg.complex_LU_invert lu p m'
+	let p = Gsl.Permut.make n
+	let lu = Gsl.Vectmat.cmat_convert (`CM (Gsl.Matrix_complex.copy m))
+	ignore (Gsl.Linalg.complex_LU_decomp lu p)
+	let m' = Gsl.Vectmat.cmat_convert (`CM (Gsl.Matrix_complex.create n n))
+	Gsl.Linalg.complex_LU_invert lu p m'
 	match m' with
 		| `CM x -> x
 		| _ -> assert false
@@ -70,35 +70,35 @@ let zinvm m =
 module Diag = struct
 	(* diagonalized Q = S*L*S'  *)
 	type t = {
-		q : Gsl_matrix.matrix;			(* Q *)
-		s : Gsl_matrix_complex.matrix;	(* S = right eigenvectors (in the columns) *)
-		s' : Gsl_matrix_complex.matrix;	(* S' = left eigenvectors (in the rows) *) 
-		l : Gsl_vector_complex.vector;	(* diag(L) = eigenvalues *)
-		pi : Gsl_vector.vector;
+		q : Gsl.Matrix.matrix;			(* Q *)
+		s : Gsl.Matrix_complex.matrix;	(* S = right eigenvectors (in the columns) *)
+		s' : Gsl.Matrix_complex.matrix;	(* S' = left eigenvectors (in the rows) *) 
+		l : Gsl.Vector_complex.vector;	(* diag(L) = eigenvalues *)
+		pi : Gsl.Vector.vector;
 		mutable have_pi : bool;
 		
-		mutable memoized_to_Pt : (float -> Gsl_matrix.matrix) option;
+		mutable memoized_to_Pt : (float -> Gsl.Matrix.matrix) option;
 		
 		mutable tol : float;
 	}
 
 	let dim q =
-		let (n,n') = Gsl_matrix.dims q.q
+		let (n,n') = Gsl.Matrix.dims q.q
 		assert (n = n')
 		n
 
 	let of_Q ?(tol=1e-6) qm =
-		let qm = Gsl_matrix.of_arrays qm
-		let l, s = Gsl_eigen.nonsymmv ~protect:true (`M qm)
+		let qm = Gsl.Matrix.of_arrays qm
+		let l, s = Gsl.Eigen.nonsymmv ~protect:true (`M qm)
 		let s' = zinvm s
 		{ q = qm; s = s; s' = s'; l = l;
-			pi = Gsl_vector.create (fst (Gsl_matrix.dims qm)); have_pi = false; memoized_to_Pt = None; tol = tol }
+			pi = Gsl.Vector.create (fst (Gsl.Matrix.dims qm)); have_pi = false; memoized_to_Pt = None; tol = tol }
 
-	let to_Q q = Gsl_matrix.to_arrays q.q
+	let to_Q q = Gsl.Matrix.to_arrays q.q
 
 	let reversible q =
 		let rev = ref true
-		let n = Gsl_vector_complex.length q.l
+		let n = Gsl.Vector_complex.length q.l
 		for i = 0 to n-1 do if not (check_real ~tol:q.tol q.l.{i}) then rev := false
 		!rev
 
@@ -107,7 +107,7 @@ module Diag = struct
 		if not q.have_pi then
 			let min_L = ref infinity
 			let min_Lp = ref (-1)
-			let n = Gsl_vector_complex.length q.l
+			let n = Gsl.Vector_complex.length q.l
 			for i = 0 to n-1 do
 				let nm_lz = Complex.norm q.l.{i}
 				if nm_lz < !min_L then
@@ -116,50 +116,50 @@ module Diag = struct
 			assert (!min_Lp >= 0)
 			if (abs_float !min_L) > q.tol then
 				failwith "CamlPaml.Q.equilibrium: smallest-magnitude eigenvalue is unacceptably large; is this a valid rate matrix?"
-			let lev = Gsl_matrix_complex.row q.s' !min_Lp
+			let lev = Gsl.Matrix_complex.row q.s' !min_Lp
 			let mass = ref Complex.zero
 			for i = 0 to n-1 do
 				mass := Complex.add !mass lev.{i}
 			for i = 0 to n-1 do
 				q.pi.{i} <- real_of_complex (Complex.div lev.{i} !mass)
 			q.have_pi <- true
-		Gsl_vector.to_array q.pi
+		Gsl.Vector.to_array q.pi
 
 	(** normalize to unity mean rate of replacement 
 	let normalize ?tol q =
-		let n = Gsl_vector_complex.length q.l
+		let n = Gsl.Vector_complex.length q.l
 		let pi = equilibrium ?tol q
 		let tot = ref 0.
 		for i = 0 to n-1 do
 			tot := !tot +. (-1.) *. pi.(i) *. q.q.{i,i}
-		let nq = Gsl_matrix.copy q.q
-		Gsl_matrix.scale q.q (1. /. !tot)
-		let nl = Gsl_vector_complex.copy q.l
+		let nq = Gsl.Matrix.copy q.q
+		Gsl.Matrix.scale q.q (1. /. !tot)
+		let nl = Gsl.Vector_complex.copy q.l
 		for i = 0 to n-1 do
 			nl.{i} <- Complex.div nl.{i} { Complex.re = !tot; im = 0. }
 		{ q with q = nq; l = nl } *)
 		
 	let scale q x =
 		if x <= 0. then invalid_arg "CamlPaml.Q.scale: nonpositive scale factor"
-		let xq = Gsl_matrix.copy q.q
-		Gsl_matrix.scale xq x
-		let xl = Gsl_vector_complex.copy q.l
+		let xq = Gsl.Matrix.copy q.q
+		Gsl.Matrix.scale xq x
+		let xl = Gsl.Vector_complex.copy q.l
 		let cx = { Complex.re = x; im = 0. }
-		for i = 0 to (Gsl_vector_complex.length xl) - 1 do
+		for i = 0 to (Gsl.Vector_complex.length xl) - 1 do
 			xl.{i} <- Complex.mul xl.{i} cx
 		{ q with q = xq; l = xl; memoized_to_Pt = None }
 		
 	let real_to_Pt q t =
 		if t < 0. then invalid_arg "CamlPaml.Q.to_Pt"
 		let ct = { Complex.re = t; im = 0. }
-		let expLt = Gsl_vector_complex.copy q.l
+		let expLt = Gsl.Vector_complex.copy q.l
 
-		for i = 0 to Gsl_vector_complex.length expLt - 1 do
+		for i = 0 to Gsl.Vector_complex.length expLt - 1 do
 			expLt.{i} <- Complex.exp (Complex.mul ct expLt.{i})	
 
 		let sm = m_of_cm (zgemm q.s (zdiagm expLt q.s'))
 
-		let n,_ = Gsl_matrix.dims sm
+		let n,_ = Gsl.Matrix.dims sm
 		for i = 0 to n-1 do
 			let tot = ref 0.
 			let smii = ref 1.
@@ -194,7 +194,7 @@ module Diag = struct
 	let to_Pt_gc q = q.memoized_to_Pt <- None
 
 	let dPt_dt ~q ~t =
-		let n,_ = Gsl_matrix.dims q.q
+		let n,_ = Gsl.Matrix.dims q.q
 		let (( * ),(+),(/)) = Complex.mul, Complex.add, Complex.div
 		let exp= Complex.exp
 		let s, l, s' = q.s, q.l, q.s'
@@ -210,10 +210,10 @@ module Diag = struct
 		
 	(* TODO in richly parameterized models, dQ_dx is likely to be sparse. *)
 	let dPt_dQ_dx ~q ~t ~dQ_dx =
-		let n,_ = Gsl_matrix.dims q.q
-		let dQt_dx = cm_of_m (Gsl_matrix.of_arrays dQ_dx)
+		let n,_ = Gsl.Matrix.dims q.q
+		let dQt_dx = cm_of_m (Gsl.Matrix.of_arrays dQ_dx)
 		
-		if Gsl_matrix_complex.dims dQt_dx <> Gsl_matrix.dims q.q then
+		if Gsl.Matrix_complex.dims dQt_dx <> Gsl.Matrix.dims q.q then
 			invalid_arg "CamlPaml.Q.dP_dx: wrong dimension of dQ_dx"
 		
 		let ct = { Complex.re = t; Complex.im = 0. }
@@ -221,9 +221,9 @@ module Diag = struct
 		let (( * ),(-),(/)) = Complex.mul, Complex.sub, Complex.div
 		
 		(* combos 1,3 or 2 (alone) -- 1,3 matches P&S? *)
-		Gsl_matrix_complex.scale dQt_dx ct (* 1 *)
+		Gsl.Matrix_complex.scale dQt_dx ct (* 1 *)
 		
-		let f = Gsl_matrix_complex.create n n
+		let f = Gsl.Matrix_complex.create n n
 		for i = 0 to pred n do
 			for j = 0 to pred n do
 				if q.l.{i} = q.l.{j} then
@@ -232,13 +232,13 @@ module Diag = struct
 					f.{i,j} <- (exp (q.l.{i} * ct) - exp (q.l.{j} * ct)) / ((q.l.{i} - q.l.{j}) * ct (* 3 *))
 		
 		(* ehh not being too gentle with the allocator/GC here *)
-		Gsl_matrix_complex.mul_elements f (zgemm q.s' (zgemm dQt_dx q.s))
-		Gsl_matrix.to_arrays (m_of_cm (zgemm q.s (zgemm f q.s')))
+		Gsl.Matrix_complex.mul_elements f (zgemm q.s' (zgemm dQt_dx q.s))
+		Gsl.Matrix.to_arrays (m_of_cm (zgemm q.s (zgemm f q.s')))
 
-let logm (m:Gsl_matrix.matrix) =
-	let n,n' = Gsl_matrix.dims m
+let logm (m:Gsl.Matrix.matrix) =
+	let n,n' = Gsl.Matrix.dims m
 	if n <> n' then invalid_arg "CamlPaml.Q.logm: non-square matrix"
-	let l, s = Gsl_eigen.nonsymmv ~protect:true (`M m)
+	let l, s = Gsl.Eigen.nonsymmv ~protect:true (`M m)
 	let s' = zinvm s
 	for i = 0 to n-1 do
 		l.{i} <- Complex.log l.{i}
@@ -247,7 +247,7 @@ let logm (m:Gsl_matrix.matrix) =
 
 (* Correction of a square matrix with zero row-sums but potentially negative off-diagonal entries into a valid rate matrix. As suggested by Israel, Rosenthal & Wei (2001) *)
 let irw2001 rawq =
-	let n,n' = Gsl_matrix.dims rawq
+	let n,n' = Gsl.Matrix.dims rawq
 	assert (n = n')
 	for i = 0 to n-1 do
 		let g_i = ref (abs_float rawq.{i,i})
@@ -268,4 +268,4 @@ let irw2001 rawq =
 
 let of_P ?tol m =
 	P.validate ?tol m
-	Gsl_matrix.to_arrays (irw2001 (logm m))
+	Gsl.Matrix.to_arrays (irw2001 (logm m))

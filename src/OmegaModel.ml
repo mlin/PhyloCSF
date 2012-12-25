@@ -154,7 +154,7 @@ let half_cauchy_lpdf ?(mode=0.0) ~scale x =
 	log numer -. log denom
 
 let lpr_rho = half_cauchy_lpdf ~mode:1.0 ~scale:0.5 (* rho = tree_scale (as in manuscript) *)
-let lpr_kappa k = log (Gsl_randist.gamma_pdf ~a:7.0 ~b:0.25 (k -. 1.0 +. epsilon_float))
+let lpr_kappa k = log (Gsl.Randist.gamma_pdf ~a:7.0 ~b:0.25 (k -. 1.0 +. epsilon_float))
 
 (* find MAP estimates of kappa & rho *)
 let kr_map leaves inst =
