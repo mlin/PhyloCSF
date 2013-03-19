@@ -42,6 +42,15 @@ Mac OS X, 'gsl' is available in both Homebrew and MacPorts.
 
 Now just run 'make' in this directory. This will build and install the
 CamlPaml library, then compile the PhyloCSF executable and copy it to
-PhyloCSF.ARCH in this directory, where e.g. ARCH = Linux.x86_64. This
-executable should be usable by anyone on the same machine/cluster; they don't
-have to set up OPAM or anything else.
+this directory. You can then use the ./PhyloCSF dispatch script like the
+examples found on our website, e.g.
+
+./PhyloCSF 12flies PhyloCSF_Examples/tal-AA.fa
+
+PhyloCSF should be usable in this way by anyone on the machine/cluster with rx
+permissions; they don't have to set up OPAM or anything else. PhyloCSF can
+be started from any working directory.
+
+If you want to 'install' PhyloCSF somewhere, you must transplant PhyloCSF,
+PhyloCSF.ARCH (where e.g. ARCH=Linux.x86_64), and the PhyloCSF_Parameters
+directory to the desired location.

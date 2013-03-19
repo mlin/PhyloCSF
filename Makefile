@@ -3,8 +3,6 @@ all: PhyloCSF
 .PHONY: PhyloCSF CamlPaml clean
 
 ARCH := $(shell uname).$(shell uname -m)
-PHYLOCSF_BASE := $(shell pwd)
-export PHYLOCSF_BASE
 
 PhyloCSF: CamlPaml
 	$(MAKE) -C src clean

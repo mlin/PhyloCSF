@@ -1,0 +1,15 @@
+#!/bin/bash
+
+ARCH=`uname`.`uname -m`
+case $0 in
+ ./*) export PHYLOCSF_BASE=`pwd` ;;
+  * ) export PHYLOCSF_BASE=`dirname $0`
+esac
+
+if [ -f "$PHYLOCSF_BASE/PhyloCSF.$ARCH" ]; then
+  $PHYLOCSF_BASE/PhyloCSF.$ARCH $@
+else
+  echo "No PhyloCSF executable found for architecture: $ARCH"
+  echo "You may need to compile/install it according to the README."
+  exit 1
+fi
