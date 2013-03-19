@@ -1,6 +1,0 @@
-[submodule "twt"]
-	path = twt
-	url = git://github.com/mlin/twt.git
-[submodule "CDE"]
-	path = CDE
-	url = git://github.com/mlin/CDE.git
