@@ -6,7 +6,7 @@ Kosiol C, Holmes I and Goldman N. An Empirical Codon Model for Protein Sequence 
 However, note that Kosiol et al. presented a 61x61 model while PhyloCSF uses a 64x64 model (including stop codons)
 *)
 
-open Batteries_uni
+open Batteries
 open Printf
 open CamlPaml
 open Expr

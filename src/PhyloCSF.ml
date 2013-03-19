@@ -1,14 +1,14 @@
 (* Wish list: PHYLIP alignment format *)
 
-open Batteries_uni
-open OptParse
+open Batteries
+open Extlib.OptParse
 open Printf
 open CamlPaml
 
 Gsl.Error.init ()
 
-module SMap = Map.StringMap
-module SSet = Set.StringSet
+module SMap = Map.Make(struct type t = string let compare = compare end)
+module SSet = Set.Make(struct type t = string let compare = compare end)
 module Codon = CamlPaml.Code.Codon64
 type strategy = PhyloCSF of [`MaxLik | `FixedLik] | OmegaTest | Nop
 type reading_frame = One | Three | Six
@@ -371,9 +371,9 @@ let parse_kv lines =
 		else
 			try
 				let (k,v) = String.split line "\t"
-				PMap.add k v kv
-			with Not_found -> PMap.add line "" kv
-	fold f PMap.empty lines
+				Map.add k v kv
+			with Not_found -> Map.add line "" kv
+	fold f Map.empty lines
 
 let initialize_strategy () =
 	let paramfile ?(required=true) suffix =
@@ -428,7 +428,7 @@ let initialize_strategy () =
 					if Sys.file_exists fn_config then
 						try
 							let kv = parse_kv (File.lines_of fn_config)
-							Some (float_of_string (PMap.find "omega_H1" kv)), Some (float_of_string (PMap.find "sigma_H1" kv))
+							Some (float_of_string (Map.find "omega_H1" kv)), Some (float_of_string (Map.find "sigma_H1" kv))
 						with
 							| exn -> failwith (sprintf "configuration file %s exists but does not specify valid omega_H1 and sigma_H1 values" fn_config)
 					else

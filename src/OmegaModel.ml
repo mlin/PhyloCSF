@@ -1,6 +1,6 @@
 (** omega (dN/dS) test, similar to using PAML to test for omega<1, but with a few of our own touches *)
 
-open Batteries_uni
+open Batteries
 open Printf
 
 open CamlPaml

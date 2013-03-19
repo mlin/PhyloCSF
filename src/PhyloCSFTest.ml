@@ -2,8 +2,8 @@
 _build/PhyloCSFTest.native "_build/PhyloCSF.native --frames=6 --orf=ATGStop --strategy=fixed" ../PhyloCSF_Parameters/12flies
 *)
 
-open Batteries_uni
-open OptParse
+open Batteries
+open Extlib.OptParse
 open Printf
 open CamlPaml
 
@@ -124,7 +124,7 @@ let mfa headers seqs =
 			Buffer.add_char buf '\n'
 		headers
 		seqs
-	buf
+	Buffer.contents buf
 	
 let open_phylocsf () =
 	let cmd = sprintf "%s %s" fn_exe fp_params
@@ -142,7 +142,7 @@ let main () =
 		flush stdout
 		flush stderr
 		let out = open_phylocsf ()
-		Buffer.output_buffer out aln
+		output_string out aln
 		flush out
 		ignore (Unix.close_process_out out)
 		printf "\n"
