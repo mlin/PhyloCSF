@@ -1,67 +1,47 @@
-+---------------------------------------------------------------------+
-|             ____  __          __       ___________ ______           |
-|            / __ \/ /_  __  __/ /____  / ____/ ___// ____/           |
-|           / /_/ / __ \/ / / / // __ \/ /    \__ \/ /_               |
-|          / ____/ / / / /_/ / // /_/ / /___ ___/ / __/               |
-|         /_/   /_/ /_/\__, /_/ \____/\____//____/_/                  |
-|                      /____/                                         |
-|                                                                     |
-|                 http://compbio.mit.edu/PhyloCSF                     | 
-+---------------------------------------------------------------------+
+  +---------------------------------------------------------------------+
+  |             ____  __          __       ___________ ______           |
+  |            / __ \/ /_  __  __/ /____  / ____/ ___// ____/           |
+  |           / /_/ / __ \/ / / / // __ \/ /    \__ \/ /_               |
+  |          / ____/ / / / /_/ / // /_/ / /___ ___/ / __/               |
+  |         /_/   /_/ /_/\__, /_/ \____/\____//____/_/                  |
+  |                      /____/                                         |
+  |                                                                     |
+  |                 http://compbio.mit.edu/PhyloCSF                     | 
+  +---------------------------------------------------------------------+
 
 SOURCE DISTRIBUTION
 
-Please see our web site for more information about PhyloCSF. Compiling
-this software from source may be difficult for most users, because it
-requires an Objective Caml toolchain that's probably not already
-present on your system. For this reason, we provide digitally-signed
-32-bit and 64-bit Linux executables on our web site.
-
-The source distribution is divided into a library, CamlPaml, containing
-generic infrastructure for phylogenetic rate models, and a program
-implementing the PhyloCSF-specific models and driver program. With
-additional development, the CamlPaml library will eventually be
+Please see our web site for more information about PhyloCSF and how to use it.
+PhyloCSF is written in OCaml. This source distribution is divided into a
+library, CamlPaml, containing generic infrastructure for phylogenetic rate
+models, and a program implementing the PhyloCSF-specific models and driver
+program. With additional development, the CamlPaml library will eventually be
 released as a separate entity, but for now it is just part of this
 distribution.
 
 Here are the steps to build the source:
 
-[1A] Install various dependencies (Ubuntu 11.10+)
+[1] Install the OCaml package manager OPAM
 
-Install these packages using apt-get:
-ocaml-findlib libocamlgsl-ocaml-dev libbatteries-ocaml-dev make
+http://opam.ocamlpro.com/doc/Quick_Install.html
 
-[1B] Install various dependencies (other Linux, Mac OS X)
+This will install a minimal OCaml toolchain (if not already present on your
+system) and the OPAM package manager. Once it's installed, initialize your
+shell environment by running: eval $(opam config env)
 
-* Objective Caml 3.11+, with native code compiler
-* OCaml findlib
-* OCaml Batteries Included 1.20+
-- GNU Scientific Library 
-- ocamlgsl 0.60 http://oandrieu.nerim.net/ocaml/gsl/ocamlgsl-0.6.0.tar.gz
+[2] Install dependencies using OPAM
 
-* These can be set up using GODI: http://godi.camlcity.org/
+opam install batteries gsl-ocaml twt
 
-[2] Configure OCaml findlib
-
-If you installed findlib (OCaml's package manager) using the Ubuntu
-packages, or another method that led to system-wide installation, you
-must set some environment variables to make it use a directory to which
-you have write access. (Alternatively, you can complete the subsequent
-steps as root, e.g. using sudo)
-
-  export OCAMLPATH=$HOME/opt/lib/ocaml             # or whatever
-  mkdir -p $OCAMLPATH
-  export OCAMLFIND_DESTDIR=$OCAMLPATH
-
-To verify your configuration, run
-
-  ocamlfind printconf
-
-"Packages will be installed in" should be a directory you can write to,
-and that same directory should appear in "Search path".
+The gsl-ocaml package may require you to separately install the GNU Scientific
+Library (GSL) from: http://www.gnu.org/software/gsl/
+On Debian/Ubuntu systems GSL is available in the 'libgsl0-dev' package, and on
+Mac OS X, 'gsl' is available in both Homebrew and MacPorts.
 
 [3] Compile PhyloCSF
 
 Now just run 'make' in this directory. This will build and install the
 CamlPaml library, then compile the PhyloCSF executable and copy it to
-PhyloCSF.ARCH in this directory, where e.g. ARCH = Linux.x86_64.
+PhyloCSF.ARCH in this directory, where e.g. ARCH = Linux.x86_64. This
+executable should be usable by anyone on the same machine/cluster; they don't
+have to set up OPAM or anything else.
