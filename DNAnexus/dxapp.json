@@ -8,17 +8,30 @@
     {
       "name": "alignments",
       "class": "gtable",
+      "type": "PhylogeneticAlignments",
       "optional": false
     },
     {
-      "name": "strategy",
+      "name": "output_name",
       "class": "string",
       "optional": true
     },
     {
+      "name": "alignments_per_job",
+      "class": "int",
+      "optional": true,
+      "default": 500
+    },
+    {
       "name": "species_set",
       "class": "string",
-      "optional": false
+      "optional": true
+    },
+    {
+      "name": "strategy",
+      "class": "string",
+      "optional": true,
+      "default": "mle"
     },
     {
       "name": "frames",
@@ -39,7 +52,7 @@
       "default": 25
     },
     {
-      "name": "allScores",
+      "name": "all_scores",
       "class": "boolean",
       "optional": true,
       "default": false
@@ -51,7 +64,7 @@
       "default": false
     },
     {
-      "name": "ancComp",
+      "name": "anc_comp",
       "class": "boolean",
       "optional": true,
       "default": false
@@ -73,6 +86,10 @@
     {
       "name": "scores",
       "class": "gtable"
+    },
+    {
+      "name": "errors",
+      "class": "int"
     }
   ],
   "runSpec": {

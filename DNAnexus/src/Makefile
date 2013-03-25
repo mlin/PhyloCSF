@@ -1,13 +1,8 @@
-all: build install
-
-build:
-	mkdir -p build && cd build && cmake -D CMAKE_BUILD_TYPE:STRING=RELEASE .. && $(MAKE)
-
-install: build
-	cp -f build/PhyloCSF ../resources
+../resources/dxPhyloCSF: _tags dxPhyloCSF.ml
+	ocamlbuild -use-ocamlfind dxPhyloCSF.native
+	mkdir -p ../resources
+	cp -f dxPhyloCSF.native ../resources/dxPhyloCSF
 
 clean:
-	rm -rf build/
-	rm -f ../resources/PhyloCSF
-
-.PHONY: all clean build install
+	ocamlbuild -clean
+	rm -f ../resources/dxPhyloCSF
