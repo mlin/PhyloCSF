@@ -31,9 +31,9 @@ shell environment by running: eval $(opam config env)
 
 [2] Install dependencies using OPAM
 
-opam install batteries ocaml+twt gsl-ocaml
+opam install batteries ocaml+twt gsl
 
-The gsl-ocaml package may require you to separately install the GNU Scientific
+The gsl package may require you to separately install the GNU Scientific
 Library (GSL) from: http://www.gnu.org/software/gsl/
 On Debian/Ubuntu systems GSL is available in the 'libgsl0-dev' package, and on
 Mac OS X, 'gsl' is available in both Homebrew and MacPorts.
