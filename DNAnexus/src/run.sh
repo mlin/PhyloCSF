@@ -4,13 +4,13 @@
 # points.
 
 main() {
-        /PhyloCSF
+        /dxPhyloCSF
 }
 
 process() {
-        /PhyloCSF process
+        /dxPhyloCSF process
 }
 
 postprocess() {
-        /PhyloCSF postprocess
+        /dxPhyloCSF postprocess
 }

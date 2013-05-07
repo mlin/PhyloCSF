@@ -94,6 +94,7 @@
   ],
   "runSpec": {
     "interpreter": "bash",
-    "file": "src/run.sh"
+    "file": "src/run.sh",
+    "execDepends": [ {"name": "gsl-bin"} ]
   }
 }

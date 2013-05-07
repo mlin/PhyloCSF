@@ -46,21 +46,21 @@ let get_species_names alignments_table =
       eprintf "%s\n%s\n" (Printexc.to_string exn) (Printexc.get_backtrace ())
       raise (DNAnexus.AppInternalError "Could not understand input alignments table. Please make sure it was generated with the maf_stitcher app.")
 
-let run_PhyloCSF species_names alignment_row =
+let run_PhyloCSF species_set species_names alignment_row =
   let n = Array.length species_names
   assert (Array.length alignment_row = n+3)
   let alignment_name = match alignment_row.(1) with
     | `String nm -> nm
     | _ -> assert false
   let seqs =
-    Array.sub alignment_row 3 (n-3) |> Array.map
+    Array.sub alignment_row 3 n |> Array.map
       function
         | `String sp -> sp
         | _ -> assert false
 
   (* TODO: keep PhyloCSF online to avoid reinstantiating phylo-models for every alignment *)
 
-  let phylocsf_out, phylocsf_in = Unix.open_process "/PhyloCSF"
+  let phylocsf_out, phylocsf_in = Unix.open_process ("/PhyloCSF " ^ species_set)
   for i = 0 to n-1 do
     fprintf phylocsf_in ">%s\n" species_names.(i)
     fprintf phylocsf_in "%s\n" seqs.(i)
@@ -128,6 +128,7 @@ let main input =
     partition_rows (JSON.int (alignments_desc$"length")) (JSON.int (input$"alignments_per_job")) |> List.map
       fun (starting, limit) ->
         let subjob = J.of_assoc [
+          "species_set", `String species_set;
           "starting", `Int starting;
           "limit", `Int limit;
           "scores", `String (GTable.id output_gtable)
@@ -143,7 +144,7 @@ let main input =
   let postprocess = new_job "postprocess" postprocess_input
 
   J.of_assoc [
-    "alignments", make_link (GTable.id output_gtable);
+    "scores", make_link (GTable.id output_gtable);
     "errors", make_jobref postprocess "errors"
   ]
 
@@ -151,13 +152,13 @@ let main input =
 let process input =
   let alignments_table = GTable.bind_link (input$"alignments")
   let species_names = get_species_names alignments_table
-  let starting = J.int (input$"subjob"$"starting")
-  let limit = J.int (input$"subjob"$"limit")
-  let scores_table = GTable.bind (None,J.string (input$"subjob"$"scores"))
+  let starting = J.int (input$"process"$"starting")
+  let limit = J.int (input$"process"$"limit")
+  let scores_table = GTable.bind (None,J.string (input$"process"$"scores"))
 
   let worker_process alignment =
     try
-      run_PhyloCSF species_names alignment
+      run_PhyloCSF (J.string (input$"process"$"species_set")) species_names alignment
     with
       | DNAnexus.AppError msg ->
           raise
