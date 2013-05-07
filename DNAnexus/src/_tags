@@ -1,2 +1,2 @@
 <*.ml{,i}>: pp(ocaml+twt)
-true: package(forkwork), thread, debug
+true: package(DNAnexus), package(forkwork), thread, debug

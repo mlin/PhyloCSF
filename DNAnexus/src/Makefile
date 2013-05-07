@@ -1,3 +1,5 @@
+all: ../resources/dxPhyloCSF
+
 ../resources/dxPhyloCSF: _tags dxPhyloCSF.ml
 	ocamlbuild -use-ocamlfind dxPhyloCSF.native
 	mkdir -p ../resources
