@@ -60,7 +60,7 @@ let run_PhyloCSF species_set species_names alignment_row =
 
   (* TODO: keep PhyloCSF online to avoid reinstantiating phylo-models for every alignment *)
 
-  let phylocsf_out, phylocsf_in = Unix.open_process ("/PhyloCSF " ^ species_set)
+  let phylocsf_out, phylocsf_in = Unix.open_process ("/PhyloCSF " ^ species_set ^ " --removeRefGaps")
   for i = 0 to n-1 do
     fprintf phylocsf_in ">%s\n" species_names.(i)
     fprintf phylocsf_in "%s\n" seqs.(i)
@@ -82,9 +82,10 @@ let run_PhyloCSF species_set species_names alignment_row =
           print_endline line
           None
         else
+          printf "%s\n" line
           let flds = Array.of_list (String.nsplit line "\t")
           assert (Array.length flds >= 2)
-          assert (flds.(1) = "decibans")
+          assert (flds.(1) = "score(decibans)")
           Some [| `String alignment_name; `Float (float_of_string flds.(2)) |]
 
 (* main job: instantiate the job tree *)
@@ -205,7 +206,7 @@ let postprocess input =
 
   let stats =
     Enum.fold
-      fun failures j -> failures + JSON.int (j$"errors")
+      fun failures j -> failures + JSON.int j
       0
       Vect.enum (JSON.array (input$"postprocess"$"errors"))
   let stats_json = J.of_assoc ["errors", `Int stats]
@@ -213,7 +214,7 @@ let postprocess input =
   GTable.set_details gtable (GTable.get_details gtable $+ ("PhyloCSF_stats", stats_json))
 
   GTable.close gtable
-  J.of_assoc ["scores", make_link (GTable.id gtable)]
+  J.of_assoc ["scores", make_link (GTable.id gtable); "errors", `Int stats]
 
 (* entry point *)
 job_main
