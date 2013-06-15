@@ -82,7 +82,6 @@ let run_PhyloCSF species_set species_names alignment_row =
           print_endline line
           None
         else
-          printf "%s\n" line
           let flds = Array.of_list (String.nsplit line "\t")
           assert (Array.length flds >= 2)
           assert (flds.(1) = "score(decibans)")
@@ -104,7 +103,7 @@ let main input =
         with _ ->
           raise (AppError "Please provide the species_set input (could not detect which PhyloCSF parameters to use for these alignments)")
       match alignments_species with
-        | "hg19_33mammals" -> "33mammals"
+        | "hg19_29mammals" -> "29mammals"
         | "dm3_12flies" -> "12flies"
         | _ -> raise (AppError (sprintf "No PhyloCSF parameters available for maf_stitcher species set: %s. Regenerate the alignments with a supported species set, or override this check by providing the species_set input" alignments_species))
 
@@ -178,7 +177,7 @@ let process input =
   let fw = ForkWork.manager ()
   let rows = GTable.iterate_rows ~starting ~limit alignments_table
   let promises = rows /@ (ForkWork.fork fw worker_process)
-
+  Enum.force promises
   let errors =
     promises |> Enum.fold
       fun n ans ->

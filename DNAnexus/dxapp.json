@@ -8,7 +8,7 @@
     {
       "name": "alignments",
       "class": "gtable",
-      "type": "PhylogeneticAlignments",
+      "type": "CrossSpeciesAlignments",
       "optional": false
     },
     {
