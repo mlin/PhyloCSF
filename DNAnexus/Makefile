@@ -2,6 +2,7 @@ all: default
 
 default:
 	rm -rf resources/PhyloCSF*
+	mkdir -p resources
 	cp -r ../PhyloCSF ../PhyloCSF.Linux.x86_64 ../PhyloCSF_Parameters resources
 	$(MAKE) -C src all
 
