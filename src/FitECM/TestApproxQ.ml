@@ -1,4 +1,4 @@
-open Batteries_uni
+open Batteries
 open OUnit
 open CamlPaml
 open Printf
@@ -10,7 +10,7 @@ let tol = 1e-6
 
 exception False
 let is_symmetric mat =
-	let open Gsl_matrix
+	let open Gsl.Matrix
 	let (m,n) = dims mat
 	if m <> n then false
 	else
@@ -22,7 +22,7 @@ let is_symmetric mat =
 		with False -> false
 
 let random_P n () =
-	let p = Gsl_matrix.create n n
+	let p = Gsl.Matrix.create n n
 	let rowsum i =
 		let tot = ref 0.
 		for j = 0 to n-1 do tot := !tot +. p.{i,j}
@@ -35,9 +35,9 @@ let random_P n () =
 	assert_bool "synthesized P matrix is valid" (try P.validate ~tol p; true with Invalid_argument _ -> false)
 	assert_bool "synthesized P matrix is asymmetric" (not (is_symmetric p))
 
-	let pi = Gsl_vector.create n
+	let pi = Gsl.Vector.create n
 	for j = 0 to n-1 do pi.{j} <- float (1 + Random.int 10000)
-	let z = pi |> Gsl_vector.to_array |> Array.enum |> fold (+.) 0.
+	let z = pi |> Gsl.Vector.to_array |> Array.enum |> fold (+.) 0.
 	for j = 0 to n-1 do pi.{j} <- pi.{j} /. z
 
 	p, pi
@@ -60,16 +60,16 @@ let symmetrizeP_tests = [
 
 
 let mm a b =
-	let (x,y) = Gsl_matrix.dims a
-	let (y',z) = Gsl_matrix.dims b
+	let (x,y) = Gsl.Matrix.dims a
+	let (y',z) = Gsl.Matrix.dims b
 	if (y <> y') then invalid_arg "mm: matrix dimensions mismatched"
-	let c = Gsl_matrix.create ~init:0.0 x z
-	Gsl_blas.(gemm ~ta:NoTrans ~tb:NoTrans ~alpha:1.0 ~a ~b ~beta:0.0 ~c)
+	let c = Gsl.Matrix.create ~init:0.0 x z
+	Gsl.Blas.(gemm ~ta:NoTrans ~tb:NoTrans ~alpha:1.0 ~a ~b ~beta:0.0 ~c)
 	c
 
 let veq ?(tol=0.001) v1 v2 =
-	let n = Gsl_vector.length v1
-	if Gsl_vector.length v2 <> n then false
+	let n = Gsl.Vector.length v1
+	if Gsl.Vector.length v2 <> n then false
 	else
 		let ans = ref true
 		for i = 0 to n-1 do
@@ -81,17 +81,17 @@ let veq ?(tol=0.001) v1 v2 =
 		!ans
 
 let meq ?tol m1 m2 =
-	let (r,c) = Gsl_matrix.dims m1
-	let (r',c') = Gsl_matrix.dims m2
+	let (r,c) = Gsl.Matrix.dims m1
+	let (r',c') = Gsl.Matrix.dims m2
 	if (r <> r' || c <> c') then false
 	else
 		let ans = ref true
 		for i = 0 to r-1 do
-			if not (veq ?tol (Gsl_matrix.row m1 i) (Gsl_matrix.row m2 i)) then ans := false
+			if not (veq ?tol (Gsl.Matrix.row m1 i) (Gsl.Matrix.row m2 i)) then ans := false
 		!ans
 
 let ppm m =
-	let (r,c) = Gsl_matrix.dims m
+	let (r,c) = Gsl.Matrix.dims m
 	for i = 0 to r-1 do
 		for j = 0 to c-1 do
 			printf "\t%.4f" m.{i,j}
@@ -186,14 +186,14 @@ module Example = struct
 	let ev = [| 0.; 0.610885; 0.848496; 1.0 |]
 
 	let test_symP () =
-		let sms' = Array.map Gsl_matrix.of_arrays sms
-		Gsl_matrix.add sms'.(0) sms'.(1)
-		Gsl_matrix.add sms'.(0) sms'.(2)
-		assert (meq (Gsl_matrix.of_arrays symP) (ArvestadBruno1997.symmetrizeP (Gsl_vector.of_array pi) sms'.(0)))
+		let sms' = Array.map Gsl.Matrix.of_arrays sms
+		Gsl.Matrix.add sms'.(0) sms'.(1)
+		Gsl.Matrix.add sms'.(0) sms'.(2)
+		assert (meq (Gsl.Matrix.of_arrays symP) (ArvestadBruno1997.symmetrizeP (Gsl.Vector.of_array pi) sms'.(0)))
 
 	let test_est_eigenvectors () =
-		let lv', rv' = ArvestadBruno1997.est_eigenvectors (Gsl_vector.of_array pi) (Gsl_matrix.of_arrays symP)
-		let lv'' = Gsl_matrix.to_arrays lv'
+		let lv', rv' = ArvestadBruno1997.est_eigenvectors (Gsl.Vector.of_array pi) (Gsl.Matrix.of_arrays symP)
+		let lv'' = Gsl.Matrix.to_arrays lv'
 
 		let d v1 v2 =
 			let maxd = ref 0.
@@ -209,7 +209,7 @@ module Example = struct
 				mind := min !mind (d lv.(i) lv''.(j))
 			assert (!mind < 0.001)
 
-		let rv'' = Gsl_matrix.to_arrays rv'
+		let rv'' = Gsl.Matrix.to_arrays rv'
 		for i = 0 to 3 do
 			let mind = ref infinity
 			for j = 0 to 3 do
@@ -217,16 +217,16 @@ module Example = struct
 			assert (!mind < 0.001)
 
 	let test_est_eigenvalues () =
-		let lv' = Gsl_matrix.of_arrays lv
-		let rv' = Gsl_matrix.of_arrays rv
-		let ev' = Gsl_vector.to_array (ArvestadBruno1997.est_eigenvalues (Array.map Gsl_matrix.of_arrays sms) lv' rv')
+		let lv' = Gsl.Matrix.of_arrays lv
+		let rv' = Gsl.Matrix.of_arrays rv
+		let ev' = Gsl.Vector.to_array (ArvestadBruno1997.est_eigenvalues (Array.map Gsl.Matrix.of_arrays sms) lv' rv')
 		Array.sort compare ev'
 
-		assert (veq (Gsl_vector.of_array ev) (Gsl_vector.of_array ev'))
+		assert (veq (Gsl.Vector.of_array ev) (Gsl.Vector.of_array ev'))
 
 	let test_est_Q () =
-		let q' = ArvestadBruno1997.est_Q (Gsl_vector.of_array pi) (Array.map Gsl_matrix.of_arrays sms) 
-		assert (meq (Gsl_matrix.of_arrays q) q')
+		let q' = ArvestadBruno1997.est_Q (Gsl.Vector.of_array pi) (Array.map Gsl.Matrix.of_arrays sms) 
+		assert (meq (Gsl.Matrix.of_arrays q) q')
 
 	let tests = ["symP" >:: test_symP; "est_eigenvectors" >:: test_est_eigenvectors; "est_eigenvalues" >:: test_est_eigenvalues; "est_Q" >:: test_est_Q]
 
@@ -274,9 +274,9 @@ module RandomData = struct
 		let qm = Q.Diag.to_Q q
 
 		let sms = random_sms k q
-		let q' = ArvestadBruno1997.est_Q (Gsl_vector.of_array pi) sms
+		let q' = ArvestadBruno1997.est_Q (Gsl.Vector.of_array pi) sms
 
-		assert (meq (Gsl_matrix.of_arrays qm) q')
+		assert (meq (Gsl.Matrix.of_arrays qm) q')
 
 	let tests = [
 		"4x4/1 (100x)" >:: (fun () -> Random.init 0; foreach (1 -- 100) (fun _ -> test_est_Q 4 1));
@@ -291,16 +291,16 @@ module Degenerate = struct
 
 	(* identity substitution matrix *)
 	let ident n =
-		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
-		let sms = [| Gsl_matrix.create ~init:0. n n |]
-		Gsl_matrix.add_diagonal sms.(0) 1.0
+		let pi = Gsl.Vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl.Matrix.create ~init:0. n n |]
+		Gsl.Matrix.add_diagonal sms.(0) 1.0
 		(pi,sms)
 
 	(* near-identity substitution matrix (one slightly nonzero off-diagonal entry in each row) *)
 	let sparse ?(delta=1e-6) n =
-		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
-		let sms = [| Gsl_matrix.create ~init:0. n n |]
-		Gsl_matrix.add_diagonal sms.(0) (1. -. delta)
+		let pi = Gsl.Vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl.Matrix.create ~init:0. n n |]
+		Gsl.Matrix.add_diagonal sms.(0) (1. -. delta)
 		for i = 0 to n-1 do
 			sms.(0).{i,(if i < n/2 then i+1 else i-1)} <- delta
 		(pi,sms)
@@ -308,8 +308,8 @@ module Degenerate = struct
 	(* random near-identity substitution matrix (all offdiagonal entries are very small random values) *)
 	let random_sparse ?(delta=1e-6) n =
 		Random.init 0
-		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
-		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		let pi = Gsl.Vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl.Matrix.create ~init:0. n n |]
 		for i = 0 to n-1 do
 			let noise = Array.init n (fun j -> if (i <> j) then Random.float delta else 0.)
 			let z = Array.fold_left (+.) 0. noise
@@ -323,8 +323,8 @@ module Degenerate = struct
 	(* half of off-diagonal entries are zero *)
 	let checkerboard ?(delta=1e-6) n =
 		Random.init 0
-		let pi = Gsl_vector.of_array (Array.make n (1.0 /. float n))
-		let sms = [| Gsl_matrix.create ~init:0. n n |]
+		let pi = Gsl.Vector.of_array (Array.make n (1.0 /. float n))
+		let sms = [| Gsl.Matrix.create ~init:0. n n |]
 		for i = 0 to n-1 do
 			for j = 0 to n-1 do
 				if i <> j then
@@ -338,7 +338,7 @@ module Degenerate = struct
 		try
 			let q = ArvestadBruno1997.est_Q pi sms
 			try
-				CamlPaml.Q.validate (Gsl_matrix.to_arrays q)
+				CamlPaml.Q.validate (Gsl.Matrix.to_arrays q)
 			with
 				| (Invalid_argument _) as exn ->
 					ppm q

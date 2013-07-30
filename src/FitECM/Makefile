@@ -1,8 +1,8 @@
 all:
-	ocamlbuild all.otarget
+	ocamlbuild -use-ocamlfind all.otarget
 	
 test:
-	ocamlbuild test.otarget
+	ocamlbuild -use-ocamlfind test.otarget
 	_build/TestApproxQ.native -verbose
 
 clean:

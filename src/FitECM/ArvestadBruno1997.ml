@@ -7,70 +7,70 @@ Sequences. J Mol Evol 45:696-703
 
 *)
 
-open Batteries_uni
+open Batteries
 open Printf
 
 exception Numerical_error of string
 
 let diag v =
-	let n = Gsl_vector.length v
-	let m = Gsl_matrix.create ~init:0. n n
+	let n = Gsl.Vector.length v
+	let m = Gsl.Matrix.create ~init:0. n n
 	for i = 0 to n-1 do m.{i,i} <- v.{i}
 	m
 
 let mm a b =
-	let (x,y) = Gsl_matrix.dims a
-	let (y',z) = Gsl_matrix.dims b
+	let (x,y) = Gsl.Matrix.dims a
+	let (y',z) = Gsl.Matrix.dims b
 	if (y <> y') then invalid_arg "mm: matrix dimensions mismatched"
-	let c = Gsl_matrix.create ~init:0.0 x z
-	Gsl_blas.(gemm ~ta:NoTrans ~tb:NoTrans ~alpha:1.0 ~a ~b ~beta:0.0 ~c)
+	let c = Gsl.Matrix.create ~init:0.0 x z
+	Gsl.Blas.(gemm ~ta:NoTrans ~tb:NoTrans ~alpha:1.0 ~a ~b ~beta:0.0 ~c)
 	c
 
 (* symmetrize the ~P matrix according to eq. 12 *)
 let symmetrizeP pi p =
-	let (m,n) = Gsl_matrix.dims p
+	let (m,n) = Gsl.Matrix.dims p
 	assert (m=n)
-	assert (n=Gsl_vector.length pi)
+	assert (n=Gsl.Vector.length pi)
 
-	let pi_sqrt = Gsl_vector.copy pi
+	let pi_sqrt = Gsl.Vector.copy pi
 	for i = 0 to n-1 do pi_sqrt.{i} <- sqrt pi.{i}
 	(* pi_sqrt is pi^(1/2) as in eq. 10 *)
 	
-	let pi_invsqrt = Gsl_vector.copy pi_sqrt
+	let pi_invsqrt = Gsl.Vector.copy pi_sqrt
 	for i = 0 to n-1 do pi_invsqrt.{i} <- 1.0 /. pi_sqrt.{i}
 	(* pi_invsqrt is pi^(-1/2) as in eq. 10 *)
 
 	(* now compute eq. 12. TODO this more efficiently than actually constructing & multiplying the diagonal matrices *)
 	let x = mm (diag pi_sqrt) (mm p (diag pi_invsqrt))
 	
-	let xT = Gsl_matrix.create n n
-	Gsl_matrix.transpose xT x
+	let xT = Gsl.Matrix.create n n
+	Gsl.Matrix.transpose xT x
 	
-	Gsl_matrix.add x xT
-	Gsl_matrix.scale x 0.5
+	Gsl.Matrix.add x xT
+	Gsl.Matrix.scale x 0.5
 	x
 
 (* compute the eigenvectors of the symmetrized P matrix,
    and use them to estimate the eigenvectors of P and Q *)
 let est_eigenvectors pi symP =
-	let (m,n) = Gsl_matrix.dims symP
+	let (m,n) = Gsl.Matrix.dims symP
 	assert (m=n)
-	assert (n=Gsl_vector.length pi)
+	assert (n=Gsl.Vector.length pi)
 
-	let (_,u) = Gsl_eigen.symmv ~protect:true (`M symP)
+	let (_,u) = Gsl.Eigen.symmv ~protect:true (`M symP)
 	(* columns of u are the eigenvectors of symP *)
 
-	let pi_sqrt = Gsl_vector.copy pi
+	let pi_sqrt = Gsl.Vector.copy pi
 	for i = 0 to n-1 do pi_sqrt.{i} <- sqrt pi.{i}
 	
-	let pi_invsqrt = Gsl_vector.copy pi_sqrt
+	let pi_invsqrt = Gsl.Vector.copy pi_sqrt
 	for i = 0 to n-1 do pi_invsqrt.{i} <- 1.0 /. pi_sqrt.{i}
 
 	let rv = mm (diag pi_invsqrt) u
-	Gsl_matrix.transpose_in_place rv
+	Gsl.Matrix.transpose_in_place rv
 	(* rows of rv are the estimated right eigenvectors of P and Q (eq. 14) *)
 
-	Gsl_matrix.transpose_in_place u
+	Gsl.Matrix.transpose_in_place u
 	let lv = mm u (diag pi_sqrt)
 	(* rows of lv are estimated left eigenvectors of P and Q (eq. 13) *)
 
@@ -78,22 +78,22 @@ let est_eigenvectors pi symP =
 
 (* estimate the eigenvalues of Q based on the observations and estimated eigenvectors *)
 let est_eigenvalues sms lv rv =
-	let (m,n) = Gsl_matrix.dims lv
+	let (m,n) = Gsl.Matrix.dims lv
 	assert (m=n)
-	assert ((m,n) = Gsl_matrix.dims rv)
+	assert ((m,n) = Gsl.Matrix.dims rv)
 	let k = Array.length sms
 	assert (k>0)
-	sms |> Array.iter (fun sm -> assert ((m,n) = Gsl_matrix.dims sm))
+	sms |> Array.iter (fun sm -> assert ((m,n) = Gsl.Matrix.dims sm))
 
 	(* compute distance estimate for each pair of sequences (sm) and nucleotide (eq. 17) *)
 	let distances =
 		sms |> Array.mapi
 			fun which_pair sm ->
-				let y = Gsl_vector.create ~init:0. n
+				let y = Gsl.Vector.create ~init:0. n
 				Array.init n
 					fun i ->
-						Gsl_blas.(gemv NoTrans ~alpha:1.0 ~a:sm ~x:(Gsl_matrix.row rv i) ~beta:0.0 ~y)
-						let exp_d_i = (Gsl_blas.(dot (Gsl_matrix.row lv i) y))
+						Gsl.Blas.(gemv NoTrans ~alpha:1.0 ~a:sm ~x:(Gsl.Matrix.row rv i) ~beta:0.0 ~y)
+						let exp_d_i = (Gsl.Blas.(dot (Gsl.Matrix.row lv i) y))
 						if (exp_d_i <= 0.) then raise (Numerical_error (sprintf "Bad distance estimate for species pair %d, residue %d: log(%e)" which_pair i exp_d_i))
 						(* TODO: test cases to provoke negative exp_d_i
 						http://www2.gsu.edu/~mkteer/npdmatri.html
@@ -128,17 +128,17 @@ let est_eigenvalues sms lv rv =
 					raise (Numerical_error (sprintf "Eigenvalue estimate %d is too negative: %e" i ans_i))
 				ans.(i) <- 0.
 
-	Gsl_vector.of_array ans
+	Gsl.Vector.of_array ans
 
 (* Normalize rate matrix to unity mean rate of replacement at equilibrium *)
 let normalize_Q pi q =
-	let (m,n) = Gsl_matrix.dims q
+	let (m,n) = Gsl.Matrix.dims q
 	assert (m=n)
-	let qdiag = Gsl_vector.of_array (Array.init m (fun i -> q.{i,i}))
+	let qdiag = Gsl.Vector.of_array (Array.init m (fun i -> q.{i,i}))
 
-	let z = 1.0 /. (Gsl_blas.dot pi qdiag)
+	let z = 1.0 /. (Gsl.Blas.dot pi qdiag)
 	(* 'sign' of eigenvectors is arbitrary *)
-	Gsl_matrix.scale q (if z>0. then 0. -. z else z)
+	Gsl.Matrix.scale q (if z>0. then 0. -. z else z)
 
 	(* round slightly negative off-diagonal entries to zero *)
 	for i = 0 to n-1 do
@@ -153,12 +153,12 @@ let normalize_Q pi q =
 
 (* putting it all together *)
 let est_Q pi sms =
-	let n = Gsl_vector.length pi
+	let n = Gsl.Vector.length pi
 	if (n < 2 || Array.length sms = 0) then invalid_arg "ArvestadBruno1997.est_Q"
-	sms |> Array.iter (fun sm -> if (Gsl_matrix.dims sm <> (n,n)) then invalid_arg "ArvestadBruno1997.est_Q")
+	sms |> Array.iter (fun sm -> if (Gsl.Matrix.dims sm <> (n,n)) then invalid_arg "ArvestadBruno1997.est_Q")
 
-	let p = Gsl_matrix.create ~init:0. n n
-	sms |> Array.iter (fun sm -> Gsl_matrix.add p sm)
+	let p = Gsl.Matrix.create ~init:0. n n
+	sms |> Array.iter (fun sm -> Gsl.Matrix.add p sm)
 
 	let symP = symmetrizeP pi p
 
@@ -167,7 +167,7 @@ let est_Q pi sms =
 
 	(* reconstruct Q according to the spectral thm Q = rv'*diag(ev)*lv
 	   http://www.maths.lancs.ac.uk/~gilbert/m306c/node4.html *)
-	Gsl_matrix.transpose_in_place rv
+	Gsl.Matrix.transpose_in_place rv
 	let q = mm rv (mm (diag ev) lv)
 	normalize_Q pi q
 	q

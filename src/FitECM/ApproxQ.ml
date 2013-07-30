@@ -1,5 +1,5 @@
 open CamlPaml
-open Batteries_uni
+open Batteries
 open Printf
 module JSON = Yojson.Basic
 
@@ -63,7 +63,7 @@ let pisum =
 			sum +. x
 		0.
 if abs_float (pisum -. 1.0) > tol then failwith "CodonFrequencies vector does not sum to 1"
-let pi = Gsl_vector.of_array pi
+let pi = Gsl.Vector.of_array pi
 
 let sms =
 	try
@@ -74,8 +74,8 @@ let sms =
 			List.map
 				fun entry ->
 					try
-						let m = Gsl_matrix.of_arrays (matrix_of_json (entry@"Matrix"))
-						if Gsl_matrix.dims m <> (n,n) then
+						let m = Gsl.Matrix.of_arrays (matrix_of_json (entry@"Matrix"))
+						if Gsl.Matrix.dims m <> (n,n) then
 							failwith (sprintf "Expected each substitution matrix to be %d-by-%d" n n)
 
 						if smooth > 0. then
@@ -110,7 +110,7 @@ for i = 1 to n-1 do
 		printf "%f" (q.{i,j} /. pi.{j})
 	printf "\n"
 
-pi |> Gsl_vector.to_array |> Array.to_list |> List.map (sprintf "%f") |> String.concat " " |> printf "\n%s\n\n\n"
+pi |> Gsl.Vector.to_array |> Array.to_list |> List.map (sprintf "%f") |> String.concat " " |> printf "\n%s\n\n\n"
 
 if n = 64 then
 	(* FIXME: residue vector should be included in input JSON *)
