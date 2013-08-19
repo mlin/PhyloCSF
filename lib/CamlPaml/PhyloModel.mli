@@ -61,7 +61,7 @@ module P14n : sig
 	(** in an instance of a p14n we have settings for the variables, thus determining a fully parameterized model *)
 	type instance
 
-	(** instantiate the model by giving settings for all the variables in its p14n. *)
+	(** instantiate the model by giving settings for all the variables in its p14n. If prior is not provided, it is determined as in [PhyloModel.make], above. *)
 	val instantiate : ?prior:(float array) -> model_p14n -> q_settings:(float array) -> tree_settings:(float array) -> instance
 
 	val model : instance -> t
@@ -69,7 +69,18 @@ module P14n : sig
 	val q_settings : instance -> float array
 	val tree_settings : instance -> float array
 	
-	(** return a copy of the instance with a subset of the settings replaced (possibly reusing computed information in the original instance that is not affected by the changed parameters) *)
+	(** return a copy of the instance with a subset of the settings replaced (possibly reusing computed information in the original instance that is not affected by the changed parameters)
+
+	When [prior] is not provided, the prior distribution for the updated model
+	is determined as follows. If the prior of the provided instance (or any of
+	its 'ancestral' instances) had been explicitly set in [instantiate], the
+	updated model will have the same previously set prior. If the provided
+	instance's prior was instead determined based on rate matrix equilibrium
+	frequencies (i.e. no prior was provided to [instantiate]), the new
+	instance's prior will be determined based on the rate matrix equilibrium
+	frequencies in the new model; thus, if [q_settings] changes as a result of
+	the update, the prior may also change.
+	*)
 	val update : ?prior:(float array) -> ?q_settings:(float array) -> ?tree_settings:(float array) -> instance -> instance
 	
 	
