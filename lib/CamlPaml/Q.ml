@@ -155,12 +155,13 @@ module Diag = struct
 			let min_L = ref infinity
 			let min_Lp = ref (-1)
 			for i = 0 to n-1 do
-				if eig.r_l.{i} < !min_L then
-					min_L := eig.r_l.{i}
+				let mag_i = abs_float eig.r_l.{i}
+				if mag_i < !min_L then
+					min_L := mag_i
 					min_Lp := i
 			assert (!min_Lp >= 0)
 			if (abs_float !min_L) > q.tol then
-				failwith "CamlPaml.Q.equilibrium: smallest-magnitude eigenvalue is unacceptably large; is this a valid rate matrix?"
+				failwith (sprintf "CamlPaml.Q.equilibrium: smallest-magnitude eigenvalue %e is unacceptably large; check rate matrix validity or increase tol" !min_L)
 			let lev = Gsl.Matrix.row eig.r_s' !min_Lp
 			let mass = ref 0.
 			for i = 0 to n-1 do
