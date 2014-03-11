@@ -6,7 +6,7 @@ type t = {
 	tree : T.t;
 	qms : Q.Diag.t array;
 	pms : P.matrix array;
-	prior : float array
+	prior : float array option
 }
 
 let make ?prior t qms =
@@ -16,25 +16,28 @@ let make ?prior t qms =
 		if Q.Diag.dim qms.(i) <> Q.Diag.dim qms.(0) || T.branch t i < 0. then invalid_arg "CamlPaml.PhyloModel.make"
 	let pms = Array.init (T.size t - 1) (fun br -> Q.Diag.to_Pt qms.(br) (T.branch t br))
 	let prior = match prior with	
-		| Some pr -> Array.copy pr
+		| Some pr ->
+			if Array.length pr <> Q.Diag.dim qms.(0) then invalid_arg "CamlPaml.PhyloModel.make"
+			Some (Array.copy pr)
 		| None ->
-			let q = qms.(snd (T.children t (T.root t)))
-			if not (Q.Diag.reversible q) then invalid_arg "CamlPaml.PhyloModel.make"
-			Q.Diag.equilibrium q
-	{ tree = T.copy t; qms = qms; pms = pms; prior = prior }
+			if not (Q.Diag.reversible qms.(snd (T.children t (T.root t)))) then invalid_arg "CamlPaml.PhyloModel.make"
+			None
+	{ tree = T.copy t; qms; pms; prior }
 	
-let tree { tree = t } = T.copy t
-let q { qms = qms } br = qms.(br)
-let p { pms = pms } br = pms.(br) (* Array.map Array.copy pms.(br) *)
-let prior { prior = rp } = Array.copy rp
+let tree { tree } = T.copy tree
+let q { qms } br = qms.(br)
+let p { pms } br = pms.(br) (* Array.map Array.copy pms.(br) *)
+let prior { tree; qms; prior } = match prior with
+	| Some pr -> Array.copy pr
+	| None -> Q.Diag.equilibrium qms.(snd (T.children tree (T.root tree))) (* q was verified reversible in [make], above*)
 
-let prepare_lik ?workspace m leaves = PhyloLik.prepare ?workspace m.tree m.pms m.prior leaves
+let prepare_lik ?workspace m leaves = PhyloLik.prepare ?workspace m.tree m.pms (prior m) leaves
 
 let checksum = 1., 1e-6
 
 let simulate m =
 	let branch_choosers = m.pms |> Array.map (fun pm -> (Array.map (Tools.random_chooser ~checksum:checksum) (Gsl.Matrix.to_arrays pm)))
-	let root_chooser = Tools.random_chooser ~checksum:checksum m.prior
+	let root_chooser = Tools.random_chooser ~checksum:checksum (prior m)
 	fun ?root ?a () ->
 		let t = m.tree
 		let a = match a with
@@ -138,10 +141,9 @@ module P14n = struct
 				pms_changed := true
 				instantiate_tree inst.p14n.tree_shape inst.p14n.tree_p14n inst.p14n.tree_domains tree_settings
 			| None -> inst.model.tree
-		let prior = match prior with
-			| Some ar -> Array.copy ar
-			| None -> inst.model.prior
-		let model = if !pms_changed then make ~prior newtree newq else { inst.model with prior = prior }
+		let model =
+			if !pms_changed then make ?prior newtree newq
+			else { inst.model with prior = prior }
 		{ inst with model = model;
 					q_settings = (match q_settings with Some set -> Array.copy set | None -> inst.q_settings);
 					tree_settings = (match tree_settings with Some set -> Array.copy set | None -> inst.tree_settings) }
