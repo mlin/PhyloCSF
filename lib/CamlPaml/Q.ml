@@ -61,7 +61,7 @@ let diagm ?c d a =
 	for i = 0 to m-1 do
 		let d_i = d.{i}
 		for j = 0 to p-1 do
-			c.{i,j} <- a.{i,j} *. d_i
+			Bigarray.Array2.unsafe_set c i j (Bigarray.Array2.unsafe_get a i j *. d_i)
 			
 	c
 
@@ -76,7 +76,7 @@ let zdiagm ?c d a =
 	for i = 0 to m-1 do
 		let d_i = d.{i}
 		for j = 0 to p-1 do
-			c.{i,j} <- Complex.mul a.{i,j} d_i
+			Bigarray.Array2.unsafe_set c i j (Complex.mul (Bigarray.Array2.unsafe_get a i j) d_i)
 			
 	c
 
