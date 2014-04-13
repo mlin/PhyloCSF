@@ -11,7 +11,11 @@ PhyloCSF: CamlPaml
 
 CamlPaml:
 	$(MAKE) -C lib/CamlPaml $(MFLAGS) reinstall
-	
+
+test: PhyloCSF
+	$(MAKE) -C lib/CamlPaml $(MFLAGS) test
+	$(MAKE) -C src $(MFLAGS) test
+
 clean:
 	$(MAKE) -C lib/CamlPaml clean
 	$(MAKE) -C src clean

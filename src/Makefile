@@ -1,8 +1,9 @@
 all:
 	ocamlbuild PhyloCSF.native
 
-test:
-	ocamlbuild testSim.native
+test: all
+	ocamlbuild testSim.native test.native
+	./test.native -verbose
 
 clean:
 	rm -f *~

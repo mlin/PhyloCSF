@@ -16,7 +16,7 @@ module Codon = CamlPaml.Code.Codon64
 let opt_parser = OptParser.make ~usage:"%prog 12flies \" --frames=6 --orf=ATGStop --strategy=fixed\"" ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
-let n = opt ~s:'n' (StdOpt.int_option ~default:8 ())
+let n = opt ~s:'n' (StdOpt.int_option ~default:5 ())
 let min_utr = opt ~l:"minUTR" (StdOpt.int_option ~default:10 ())
 let max_utr = opt ~l:"maxUTR" (StdOpt.int_option ~default:50 ())
 let min_cds = opt ~l:"minCDS" (StdOpt.int_option ~default:40 ())
@@ -138,6 +138,7 @@ let run_phylocsf aln =
 	let phylocsf_answer = input_line phylocsf_in
 	match Unix.close_process (phylocsf_in,phylocsf_out) with
 		| Unix.WEXITED 0 -> String.nsplit phylocsf_answer "\t"
+		| Unix.WEXITED c -> exit c
 		| _ -> raise Exit
 	
 let main () =
