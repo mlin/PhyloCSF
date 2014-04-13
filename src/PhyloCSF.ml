@@ -39,6 +39,7 @@ let reading_frame = opt ~group ~l:"frames" ~s:'f' ~h:"how many reading frames to
 let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3|ToFirstStop|FromLastStop|ToOrFromStop" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | "fromlaststop" -> FromLastStop | "toorfromstop" -> ToOrFromStop| x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
 let print_orfs = opt ~group ~l:"allScores" ~h:"report scores of all regions evaluated, not just the max" (StdOpt.store_true ())
+let procs = opt ~group ~s:'p' ~h:"search frames/ORFs using up to p parallel subprocesses" (StdOpt.int_option ~default: 1 ())
 
 let group = OptParser.add_group opt_parser "output control"
 let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
@@ -64,6 +65,16 @@ if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
 if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
 	eprintf "Warning: --orf with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
 	flush stderr
+
+if Opt.get procs > 1 && not ForkMaybe.can_fork then
+	eprintf "Warning: ignoring -p, recompile PhyloCSF with: make FORKWORK=1\n"
+	flush stderr
+
+(*
+if Opt.get procs > 1 && Opt.get orf_mode = AsIs && Opt.get reading_frame = One then
+	eprintf "Warning: -p isn't useful without --orf and/or --frames\n"
+	flush stderr
+*)
 
 if Opt.get debug then Printexc.record_backtrace true
 
@@ -296,7 +307,7 @@ let process_alignment (nt,t,evaluator) fn =
 			
 			(* evaluate each candidate region *)
 			let rgns_scores =
-				rgns |> Enum.filter_map
+				rgns |> ForkMaybe.Enum.filter_map ~procs:(Opt.get procs)
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
@@ -313,8 +324,8 @@ let process_alignment (nt,t,evaluator) fn =
 									hi
 									if Opt.get reading_frame = Six then (if rc then "\t-" else "\t+") else ""
 									Printexc.to_string exn
+								flush stdout
 								if Opt.get debug then
-									flush stdout
 									eprintf "%s" (Printexc.get_backtrace ())
 									flush stderr
 								None

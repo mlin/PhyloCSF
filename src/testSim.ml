@@ -129,7 +129,7 @@ let mfa headers seqs =
 	Buffer.contents buf
 	
 let run_phylocsf aln =
-	let cmd = sprintf "%s %s" fn_exe fp_params
+	let cmd = sprintf "%s %s%s" fn_exe fp_params (if ForkMaybe.can_fork then " -p 8" else "")
 
 	let phylocsf_in, phylocsf_out = Unix.open_process ~cleanup:true cmd
 	output_string phylocsf_out aln
