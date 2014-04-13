@@ -1,6 +1,5 @@
-(* Test harness for PhyloCSF executable...feeds it simulated alignments of 5'UTR+ORF+3'UTR, to make sure we can recover the ORF.  Example usage:
-_build/PhyloCSFTest.native "_build/PhyloCSF.native --frames=6 --orf=ATGStop --strategy=fixed" ../PhyloCSF_Parameters/12flies
-*)
+(* Test harness for PhyloCSF executable...feeds it simulated alignments of
+   5'UTR+ORF+3'UTR, to make sure we can recover the ORF. *)
 
 open Batteries
 open Extlib.OptParse
@@ -8,13 +7,16 @@ open Printf
 open CamlPaml
 
 Gsl.Error.init ()
-Random.self_init ()
+Random.init 42
+
+let dn_here = Filename.dirname Sys.argv.(0)
 
 module Codon = CamlPaml.Code.Codon64
 
-let opt_parser = OptParser.make ~usage:"%prog \"/path/to/PhyloCSF --phyloCSF --options\" /path/to/parameters" ()
+let opt_parser = OptParser.make ~usage:"%prog 12flies \" --frames=6 --orf=ATGStop --strategy=fixed\"" ()
 let opt ?group ?h ?hide ?s ?short_names ?l ?long_names x = OptParser.add opt_parser ?group ?help:h ?hide ?short_name:s ?long_name:l x; x
 
+let n = opt ~s:'n' (StdOpt.int_option ~default:8 ())
 let min_utr = opt ~l:"minUTR" (StdOpt.int_option ~default:10 ())
 let max_utr = opt ~l:"maxUTR" (StdOpt.int_option ~default:50 ())
 let min_cds = opt ~l:"minCDS" (StdOpt.int_option ~default:40 ())
@@ -28,8 +30,8 @@ if List.length cmd < 2 then
 	OptParser.usage opt_parser ()
 	exit (-1) 
 
-let fn_exe = List.nth cmd 0
-let fp_params = List.nth cmd 1
+let fp_params = Filename.concat (Filename.concat dn_here "../PhyloCSF_Parameters") (List.nth cmd 0)
+let fn_exe = (Filename.concat dn_here "PhyloCSF.native") ^ " " ^ (List.nth cmd 1)
 	
 (******************************************************************************)
 
@@ -126,25 +128,32 @@ let mfa headers seqs =
 		seqs
 	Buffer.contents buf
 	
-let open_phylocsf () =
+let run_phylocsf aln =
 	let cmd = sprintf "%s %s" fn_exe fp_params
-	Unix.open_process_out ~cleanup:true cmd
+
+	let phylocsf_in, phylocsf_out = Unix.open_process ~cleanup:true cmd
+	output_string phylocsf_out aln
+	close_out phylocsf_out
+
+	let phylocsf_answer = input_line phylocsf_in
+	match Unix.close_process (phylocsf_in,phylocsf_out) with
+		| Unix.WEXITED 0 -> String.nsplit phylocsf_answer "\t"
+		| _ -> raise Exit
 	
 let main () =
 	let _, t, model = load_parameters ()
 	
 	let headers = Array.init (T.leaves t) (T.label t)
 	
-	while true do
-		printf "\ttruth\t\t\t"
+	for i = 1 to Opt.get n do
+		printf "\ttruth\t\t\t\t"
 		let aln = mfa headers (maybe_revcomp (stringify_alignment_columns (full_alignment_columns model)))
 		printf "\n"
 		flush stdout
 		flush stderr
-		let out = open_phylocsf ()
-		output_string out aln
-		flush out
-		ignore (Unix.close_process_out out)
+
+		let phylocsf_result = run_phylocsf aln
+		printf "%s\n" (String.join "\t" phylocsf_result)
 		printf "\n"
 		flush stdout
 
