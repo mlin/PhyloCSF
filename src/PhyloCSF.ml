@@ -39,6 +39,7 @@ let reading_frame = opt ~group ~l:"frames" ~s:'f' ~h:"how many reading frames to
 let orf_mode = opt ~group ~l:"orf" ~h:"search for ORFs (default AsIs)" (Opt.value_option "AsIs|ATGStop|StopStop|StopStop3|ToFirstStop|FromLastStop|ToOrFromStop" (Some AsIs)  (fun s -> match String.lowercase s with "asis" -> AsIs | "atgstop" -> ATGStop | "stopstop" -> StopStop | "stopstop3" -> StopStop3 | "tofirststop" -> ToFirstStop | "fromlaststop" -> FromLastStop | "toorfromstop" -> ToOrFromStop| x -> invalid_arg x) (fun _ s -> sprintf "invalid ORF search mode %s"s))
 let min_codons = opt ~group ~l:"minCodons" ~h:"minimum ORF length for searching over ORFs (default 25 codons)" (StdOpt.int_option ~default:25 ())
 let print_orfs = opt ~group ~l:"allScores" ~h:"report scores of all regions evaluated, not just the max" (StdOpt.store_true ())
+let procs = opt ~group ~s:'p' ~h:"search frames/ORFs using up to p parallel subprocesses" (StdOpt.int_option ~default: 1 ())
 
 let group = OptParser.add_group opt_parser "output control"
 let print_bls = opt ~group ~l:"bls" ~h:"include alignment branch length score (BLS) for the reported region in output" (StdOpt.store_true ())
@@ -64,6 +65,16 @@ if Opt.get orf_mode <> AsIs && Opt.get allow_ref_gaps then
 if Opt.get orf_mode <> AsIs && Opt.get reading_frame = One then
 	eprintf "Warning: --orf with --frames=1; are you sure you don't want to search for ORFs in three or six frames?\n"
 	flush stderr
+
+if Opt.get procs > 1 && not ForkMaybe.can_fork then
+	eprintf "Warning: ignoring -p, recompile PhyloCSF with: make FORKWORK=1\n"
+	flush stderr
+
+(*
+if Opt.get procs > 1 && Opt.get orf_mode = AsIs && Opt.get reading_frame = One then
+	eprintf "Warning: -p isn't useful without --orf and/or --frames\n"
+	flush stderr
+*)
 
 if Opt.get debug then Printexc.record_backtrace true
 
@@ -178,7 +189,7 @@ let find_orfs ?(ofs=0) dna =
 		orfs := if firstorflo = ofs then [firstorf] else []		
 		orfs := if len - lastorfhi <= 3 && firstorf <> lastorf then lastorf :: !orfs else !orfs
 		
-	!orfs |> List.rev |> List.enum |> filter
+	!orfs |> List.rev |> List.filter
 		fun (lo,hi) ->
 			assert ((hi-lo+1) mod 3 = 0)
 			assert ((lo-ofs) mod 3 = 0)
@@ -191,9 +202,9 @@ let candidate_regions dna rcdna =
 			(if Opt.get reading_frame <> One then
 				[ (false,1,hi); (false,2,hi) ] else []);
 			(if Opt.get reading_frame = Six then
-				[ (true,0,hi); (true,1,hi); (true,2,hi) ] else []) ] |> List.flatten |> List.enum
+				[ (true,0,hi); (true,1,hi); (true,2,hi) ] else []) ] |> List.flatten
 	else
-		let aoeu a = map (fun (b,c) -> a,b,c)
+		let aoeu a = List.map (fun (b,c) -> a,b,c)
 		let all_orfs = ref [aoeu false (find_orfs ~ofs:0 dna)]
 		if Opt.get reading_frame <> One then
 			all_orfs := aoeu false (find_orfs ~ofs:1 dna) :: !all_orfs
@@ -203,7 +214,7 @@ let candidate_regions dna rcdna =
 			all_orfs := aoeu true (find_orfs ~ofs:0 rcdna) :: !all_orfs
 			all_orfs := aoeu true (find_orfs ~ofs:1 rcdna) :: !all_orfs
 			all_orfs := aoeu true (find_orfs ~ofs:2 rcdna) :: !all_orfs
-		concat (List.enum (List.rev !all_orfs))
+		List.rev !all_orfs |> List.flatten
 
 let pleaves ?(lo=0) ?hi t leaf_ord aln =
 	let hi = match hi with Some x -> x | None -> String.length aln.(0) - 1
@@ -288,38 +299,56 @@ let process_alignment (nt,t,evaluator) fn =
 
 		(* generate list of candidate regions within the alignment *)
 		let rgns = candidate_regions aln.(0) rc_aln.(0)
+
+		let rgns =
+			if Opt.get procs > 1 && ForkMaybe.can_fork then
+				(* If parallelizing, sort regions longest-to-shortest
+				   in order to optimize utilization *)
+				List.sort (fun (_,lo1,hi1) (_,lo2,hi2) -> (hi2-lo2) - (hi1-lo1)) rgns
+			else rgns
 		
 		try
-			if Enum.is_empty rgns then
+			if rgns = [] then
 				assert (Opt.get orf_mode <> AsIs)
 				failwith "no sufficiently long ORFs found"
 			
-			(* evaluate each candidate region *)
+			(* evaluate each candidate region, perhaps in parallel *)
 			let rgns_scores =
-				rgns |> Enum.filter_map
+				rgns |> ForkMaybe.map ~procs:(Opt.get procs)
 					fun (rc,lo,hi) ->
 						try
 							let aln_leaves = Array.of_enum (pleaves ~lo:lo ~hi:hi t leaf_ord (if rc then rc_aln else aln))
 							let rslt = evaluator aln_leaves
-							Some (rslt,rc,lo,hi)
+							`Res (rslt,rc,lo,hi)
 						with
 							| exn ->
 								(* problem evaluating an individual region within the
-								   alignment: complain, but proceed, as maybe some
-								   other region will succeed. *)
-								printf "%s\texception\t%d\t%d%s\t%s\n"
-									fn2id fn
-									lo
-									hi
-									if Opt.get reading_frame = Six then (if rc then "\t-" else "\t+") else ""
-									Printexc.to_string exn
+								   alignment: register complaint, but don't die, as
+								   maybe some other region will succeed. *)
+								let msg =
+									sprintf "%s\texception\t%d\t%d%s\t%s"
+										fn2id fn
+										lo
+										hi
+										if Opt.get reading_frame = Six then (if rc then "\t-" else "\t+") else ""
+										Printexc.to_string exn
 								if Opt.get debug then
-									flush stdout
-									eprintf "%s" (Printexc.get_backtrace ())
-									flush stderr
-								None
+									`Exn [| msg; Printexc.get_backtrace () |]
+								else
+									`Exn [| msg |]
 
-			if Enum.is_empty rgns_scores then failwith "no regions successfully evaluated"
+			let rgns_scores =
+				rgns_scores |> List.filter_map
+					function
+						| `Res x -> Some x
+						| `Exn [| msg |] -> print_endline msg; flush stdout; None
+						| `Exn [| msg; bt |] ->
+							print_endline msg; flush stdout
+							prerr_endline bt; flush stderr
+							None
+						| _ -> assert false
+
+			if rgns_scores = [] then failwith "no regions successfully evaluated"
 
 			let report_score ty (rslt,rc,lo,hi) =
 				printf "%s\t%s\t%.4f" (fn2id fn) ty rslt.PhyloCSFModel.score
@@ -342,10 +371,9 @@ let process_alignment (nt,t,evaluator) fn =
 					foreach (List.enum rslt.PhyloCSFModel.diagnostics) (fun (k,v) -> printf " %s=%s" k v)
 				printf "\n"
 						
-			Enum.force rgns_scores
 			if Opt.get print_orfs then
-				Enum.clone rgns_scores |> iter (report_score "orf_score(decibans)")
-			reduce max rgns_scores |> report_score (if Opt.get orf_mode <> AsIs || Opt.get reading_frame <> One then "max_score(decibans)" else "score(decibans)")
+				rgns_scores |> List.iter (report_score "orf_score(decibans)")
+			List.reduce max rgns_scores |> report_score (if Opt.get orf_mode <> AsIs || Opt.get reading_frame <> One then "max_score(decibans)" else "score(decibans)")
 		with
 			| ((Assert_failure _) as exn) -> raise exn
 			(* move on to the next alignment: convergence problems, no ORFs found, etc. *)

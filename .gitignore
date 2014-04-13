@@ -2,3 +2,4 @@ PhyloCSF.Linux.x86_64
 PhyloCSF.Darwin.x86_64
 _build
 *.native
+ForkMaybe.ml

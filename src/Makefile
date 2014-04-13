@@ -1,12 +1,25 @@
-all:
-	ocamlbuild PhyloCSF.native
+OCAMLBUILDFLAGS=
+ifdef FORKWORK
+OCAMLBUILDFLAGS=-tag pkg_forkwork
+endif
 
-test: all
-	ocamlbuild testSim.native test.native
+all:
+	rm -f ForkMaybe.ml
+ifdef FORKWORK
+	ln -s ForkYes.ml ForkMaybe.ml
+else
+	ln -s ForkNo.ml ForkMaybe.ml
+endif
+	ocamlbuild $(OCAMLBUILDFLAGS) PhyloCSF.native
+
+test: testexe
 	./test.native -verbose
+
+testexe: all
+	ocamlbuild $(OCAMLBUILDFLAGS) testSim.native test.native
 
 clean:
 	rm -f *~
 	ocamlbuild -clean
 
-.PHONY: all test clean
+.PHONY: all test testexe clean

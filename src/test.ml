@@ -12,6 +12,9 @@ let slow () = skip_if (try ignore (Sys.getenv "SKIP_SLOW"); true with Not_found 
 (* test results on the three bundled example alignments *)
 
 let run_PhyloCSF species params =
+  let params =
+    if ForkMaybe.can_fork then params ^ " -p 8"
+    else params
   let cmd = sprintf "%s %s %s" fn_PhyloCSF (Filename.concat dn_here ("../PhyloCSF_Parameters/" ^ species)) params
 
   let phylocsf_in = Unix.open_process_in ~cleanup:true cmd
