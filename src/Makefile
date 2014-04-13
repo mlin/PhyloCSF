@@ -12,12 +12,14 @@ else
 endif
 	ocamlbuild $(OCAMLBUILDFLAGS) PhyloCSF.native
 
-test: all
-	ocamlbuild $(OCAMLBUILDFLAGS) testSim.native test.native
+test: testexe
 	./test.native -verbose
+
+testexe: all
+	ocamlbuild $(OCAMLBUILDFLAGS) testSim.native test.native
 
 clean:
 	rm -f *~
 	ocamlbuild -clean
 
-.PHONY: all test clean
+.PHONY: all test testexe clean
