@@ -7,6 +7,8 @@ let dn_here = Filename.dirname Sys.argv.(0)
 
 let fn_PhyloCSF = Filename.concat dn_here "PhyloCSF.native"
 
+let slow () = skip_if (try ignore (Sys.getenv "SKIP_SLOW"); true with Not_found -> false) "SKIP_SLOW"
+
 (* test results on the three bundled example alignments *)
 
 let run_PhyloCSF species params =
@@ -32,15 +34,17 @@ let aldh2_ex5_out () =
   float_of_string (List.nth ans 2) $hould # be # within (-178.93,-178.92)
 
 let aldh2_ex5_in () =
-  let ans = run_PhyloCSF "29mammals" "../PhyloCSF_Examples/ALDH2.exon5.fa --frames=6"
+  let abbreviate = (try ignore (Sys.getenv "SKIP_SLOW"); true with Not_found -> false)
+  let ans = run_PhyloCSF "29mammals" ("../PhyloCSF_Examples/ALDH2.exon5.fa --frames=" ^ (if abbreviate then "3" else "6"))
   print_endline (String.join "\t" ans)
   List.nth ans 1 $hould # equal "max_score(decibans)"
   float_of_string (List.nth ans 2) $hould # be # within (218.26,218.27)
   int_of_string (List.nth ans 3) $hould # equal 1
   int_of_string (List.nth ans 4) $hould # equal 111
-  List.nth ans 5 $hould # equal "+"
+  if not abbreviate then List.nth ans 5 $hould # equal "+"
 
 let aldh2_mRNA () =
+  slow ()
   let ans = run_PhyloCSF "29mammals" "../PhyloCSF_Examples/Aldh2.mRNA.fa --orf=ATGStop --frames=3 --removeRefGaps --aa"
   print_endline (String.join "\t" ans)
   List.nth ans 1 $hould # equal "max_score(decibans)"
@@ -71,12 +75,14 @@ let sim_AsIs_fixed () =
   check (sprintf "%s --maxUTR=0 --constantFrame --constantStrand 12flies ' --strategy=fixed'" fn_testSim)
 
 let sim_AsIs_mle () =
+  slow ()
   check (sprintf "%s --maxUTR=0 --constantFrame --constantStrand 12flies ' --strategy=mle'" fn_testSim)
 
 let sim_ATGStop_fixed () =
   check (sprintf "%s 12flies ' --orf=ATGStop --frames=6 --strategy=fixed'" fn_testSim)
 
 let sim_ATGStop_mle () =
+  slow ()
   check (sprintf "%s 12flies ' --orf=ATGStop --frames=6 --strategy=mle'" fn_testSim)
 
 
