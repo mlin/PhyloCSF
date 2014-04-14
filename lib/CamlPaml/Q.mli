@@ -15,8 +15,11 @@ module Diag : sig
 	type t
 	
 	(** Diagonalize the rate matrix. The rate matrix needs not be reversible (the internal
-        representation uses complex arithmetic). *)
-	val of_Q : ?tol:float -> matrix -> t
+        representation can use complex arithmetic).
+
+    @param force_complex force internal use of complex arithmetic, even if the rate matrix
+                         is reversible. *)
+	val of_Q : ?tol:float -> ?force_complex:bool -> matrix -> t
 	val to_Q : t -> matrix
 	
 	(** return [n] for an [n-by-n] matrix *)

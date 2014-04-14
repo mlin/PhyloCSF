@@ -121,7 +121,7 @@ module Diag = struct
 		assert (n = n')
 		n
 
-	let of_Q ?(tol=1e-6) qm =
+	let of_Q ?(tol=1e-6) ?(force_complex=false) qm =
 		let qm = Gsl.Matrix.of_arrays qm
 		let l, s = Gsl.Eigen.nonsymmv ~protect:true (`M qm)
 		let s' = zinvm s
@@ -131,7 +131,7 @@ module Diag = struct
 		for i = 0 to n-1 do if not (check_real ~tol l.{i}) then rev := false
 
 		let eig =
-			if !rev then
+			if !rev && not force_complex then
 				`r { r_s = m_of_cm s; r_s' = m_of_cm s'; r_l = v_of_cv l }
 			else
 				`nr { nr_s = s; nr_s' = s'; nr_l = l }
@@ -144,13 +144,18 @@ module Diag = struct
 
 	let reversible = function
 		| { eig = `r _ } -> true
-		| _ -> false
+		| { eig = `nr { nr_l }; tol } ->
+			let rev = ref true
+			let n = Gsl.Vector_complex.length nr_l
+			for i = 0 to n-1 do if not (check_real ~tol:tol nr_l.{i}) then rev := false
+			!rev
 
 	let equilibrium q =
 		if not q.have_pi then
 			let eig = match q.eig with
 				| `r eig -> eig
-				| `nr _ -> failwith "CamlPaml.Q.equilibrium: non-reversible model"
+				| `nr { nr_s; nr_s'; nr_l } when reversible q -> { r_s = m_of_cm nr_s; r_s' = m_of_cm nr_s'; r_l = v_of_cv nr_l }
+				| _ -> failwith "CamlPaml.Q.equilibrium: non-reversible model"
 			let n = Gsl.Vector.length eig.r_l
 			let min_L = ref infinity
 			let min_Lp = ref (-1)

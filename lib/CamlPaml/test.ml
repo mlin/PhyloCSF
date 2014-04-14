@@ -72,17 +72,31 @@ module BeagleTests = struct
 		let qdiagtests = "Q.Diag" >::: [TestCase (fun () -> assert_bool "Q.Diag.reversible" (Q.Diag.reversible q));
 										TestCase (fun () -> assert_equal_vector ~msg:"Q.Diag.equilibrium" (Q.Diag.equilibrium q) [| 0.25; 0.25; 0.25; 0.25 |])]
 										
-		let likelihood =
-			TestCase
-				fun () ->
-					let m = PhyloModel.make t [| q |]
-					let ll = ref 0.
-					for i = 0 to String.length human - 1 do
-						let lf = Array.map (fun ch -> if Code.DNA.is ch then `Certain (Code.DNA.index ch) else `Marginalize) [| human.[i]; chimp.[i]; gorilla.[i] |]
-						ll := !ll +. log (PhyloLik.likelihood (PhyloModel.prepare_lik m lf))
-					assert_equal ~cmp:(cmp_float ~epsilon:0.001) ~printer:string_of_float ~msg:"mismatch" (-1574.63623) !ll
+		let likelihood which_q () =
+			let m = PhyloModel.make t [| which_q |]
+			let ll = ref 0.
+			for i = 0 to String.length human - 1 do
+				let lf = Array.map (fun ch -> if Code.DNA.is ch then `Certain (Code.DNA.index ch) else `Marginalize) [| human.[i]; chimp.[i]; gorilla.[i] |]
+				ll := !ll +. log (PhyloLik.likelihood (PhyloModel.prepare_lik m lf))
+			assert_equal ~cmp:(cmp_float ~epsilon:0.001) ~printer:string_of_float ~msg:"mismatch" (-1574.63623) !ll
+
+		let qc =
+			Q.Diag.scale
+				Q.Diag.of_Q ~force_complex:true [|
+						[| (-3.); 1.; 1.; 1.; |];
+						[| 1.; (-3.); 1.; 1.; |];
+						[| 1.; 1.; (-3.); 1.; |];
+						[| 1.; 1.; 1.; (-3.); |]
+					|]
+				(1. /. 3.)
+
+		let qcdiagtests = "Q.Diag (complex)" >::: [
+				TestCase (fun () -> assert_bool "Q.Diag.reversible" (Q.Diag.reversible qc));
+				TestCase (fun () -> assert_equal_vector ~msg:"Q.Diag.equilibrium" (Q.Diag.equilibrium qc) [| 0.25; 0.25; 0.25; 0.25 |])
+			]
 					
-		let tests = "TinyTest" >::: [ qdiagtests; "likelihood" >: likelihood ]
+		let tests = "TinyTest" >::: [ qdiagtests; "likelihood" >:: likelihood q;
+									  qcdiagtests; "likelihood (complex)" >:: likelihood qc ]
 
 	let tests = "BeagleTest" >::: [ TinyTest.tests ]
 

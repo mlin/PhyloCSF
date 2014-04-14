@@ -5,7 +5,7 @@ lib:
 
 test:
 	ocamlbuild test.native
-	_build/test.native -verbose
+	_build/test.native
 
 
 install: lib
