@@ -3,4 +3,4 @@ script: bash -ex .travis-ci.sh
 env:
   matrix:
     - SKIP_SLOW=1
-    - DUMMY=1
+    - FORKWORK=1

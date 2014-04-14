@@ -1,4 +1,4 @@
-OPAM_DEPENDS="batteries gsl ocaml+twt ounit should"
+OPAM_DEPENDS="batteries gsl ocaml+twt forkwork ounit should"
  
 sudo add-apt-repository -y ppa:avsm
 sudo apt-get update -qq
