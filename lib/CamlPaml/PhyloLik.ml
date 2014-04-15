@@ -112,7 +112,10 @@ let ensure_beta x =
 				inter.{a} <- bp.{a} *. (Gsl.Blas.dot (Gsl.Matrix.row ss a) xas)
 
 			for b = 0 to k-1 do
-				for a = 0 to k-1 do ps_colb.{a} <- ps.{a,b}
+				for a = 0 to k-1 do
+					(* idea: instead of this loop it'd probably be a little faster
+					         to transpose ps *)
+					Bigarray.Array1.unsafe_set ps_colb a (Bigarray.Array2.unsafe_get ps a b)
 				x.beta.{i,b} <- Gsl.Blas.dot inter ps_colb
 		x.have_beta <- true
 		
@@ -123,17 +126,16 @@ let likelihood x =
 
 let node_posterior inferred i =
 	if inferred.workspace.generation <> inferred.my_generation then failwith "CamlPaml.PhyloLik.node_posterior: invalidated workspace"
-	ensure_beta inferred
+	ensure_alpha inferred
 	let k = snd (Gsl.Matrix.dims inferred.alpha)
-	if inferred.z = 0. then
+	if inferred.z = 0. then (* the data were impossible by the model *)
 		Array.make k 0.
+	else if i < T.leaves inferred.tree then (* leaf: usually certain *)
+		Gsl.Vector.to_array (alpha_get inferred i)
 	else
-		let nleaves = T.leaves inferred.tree
-
-		if i < nleaves then
-			Gsl.Vector.to_array (alpha_get inferred i)
-		else
-			Array.init k (fun x -> (alpha_get inferred i).{x} *. inferred.beta.{i,x} /. inferred.z)
+		(* calculate the betas (except for the root, whose betas get prefilled in prepare) *)
+		if i <> T.root inferred.tree then ensure_beta inferred
+		Array.init k (fun x -> (alpha_get inferred i).{x} *. inferred.beta.{i,x} /. inferred.z)
 
 let add_branch_posteriors ?(weight=1.0) inferred branch ecounts =
 	if inferred.workspace.generation <> inferred.my_generation then failwith "CamlPaml.PhyloLik.add_branch_posterior: invalidated workspace"

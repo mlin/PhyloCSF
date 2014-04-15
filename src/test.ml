@@ -25,16 +25,18 @@ let run_PhyloCSF species params =
     | _ -> raise Exit
 
 let talAA () =
-  let ans = run_PhyloCSF "12flies" "../PhyloCSF_Examples/tal-AA.fa"
+  let ans = run_PhyloCSF "12flies" "../PhyloCSF_Examples/tal-AA.fa --ancComp"
   print_endline (String.join "\t" ans)
   List.nth ans 1 $hould # equal "score(decibans)"
   float_of_string (List.nth ans 2) $hould # be # within (297.62,297.63)
+  float_of_string (List.nth ans 3) $hould # be # within (48.25,48.26)
 
 let aldh2_ex5_out () =
-  let ans = run_PhyloCSF "29mammals" "../PhyloCSF_Examples/ALDH2.exon5.fa"
+  let ans = run_PhyloCSF "29mammals" "../PhyloCSF_Examples/ALDH2.exon5.fa --ancComp"
   print_endline (String.join "\t" ans)
   List.nth ans 1 $hould # equal "score(decibans)"
   float_of_string (List.nth ans 2) $hould # be # within (-178.93,-178.92)
+  float_of_string (List.nth ans 3) $hould # be # within (-38.29,-38.28)
 
 let aldh2_ex5_in () =
   let abbreviate = (try ignore (Sys.getenv "SKIP_SLOW"); true with Not_found -> false)
