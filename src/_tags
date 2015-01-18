@@ -1,4 +1,4 @@
 <**/*.ml> or <**/*.mli>: pp(ocaml+twt)
-<test.ml> or <test.native>: pkg_should, pkg_oUnit, pkg_str
-true: debug, pkg_batteries, pkg_CamlPaml
+<test.ml> or <test.native>: package(should), package(oUnit), package(str)
+true: debug, package(batteries), package(CamlPaml)
 

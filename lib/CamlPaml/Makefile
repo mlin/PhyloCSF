@@ -1,10 +1,10 @@
 LIBNAME = CamlPaml
 
 lib:
-	ocamlbuild ${LIBNAME}.cma ${LIBNAME}.cmxa
+	ocamlbuild -use-ocamlfind ${LIBNAME}.cma ${LIBNAME}.cmxa
 
 test:
-	ocamlbuild test.native
+	ocamlbuild -use-ocamlfind test.native
 	_build/test.native
 
 
@@ -23,4 +23,4 @@ clean:
 	ocamlbuild -clean
 
 doc:
-	ocamlbuild ${LIBNAME}.docdir/index.html
+	ocamlbuild -use-ocamlfind ${LIBNAME}.docdir/index.html

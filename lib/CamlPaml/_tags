@@ -1,7 +1,7 @@
-<**/*.ml> or <**/*.mli>: ocaml, debug, pkg_gsl, pp(ocaml+twt)
+<**/*.ml> or <**/*.mli>: ocaml, debug, package(gsl), pp(ocaml+twt)
 <**/NewickLexer.*>: -pp(ocaml+twt)
 <**/NewickParser.*>: -pp(ocaml+twt)
 <**/*.cmx>: for-pack(CamlPaml)
 <CamlPaml.cmx>: -for-pack(CamlPaml)
-<test.ml>: pkg_oUnit
-<test.native>: pkg_gsl, pkg_oUnit
+<test.ml>: package(oUnit)
+<test.native>: package(gsl), package(oUnit)

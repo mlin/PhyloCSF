@@ -1,6 +1,6 @@
 OCAMLBUILDFLAGS=
 ifdef FORKWORK
-OCAMLBUILDFLAGS=-tag pkg_forkwork
+OCAMLBUILDFLAGS=-tag "package(forkwork)"
 endif
 
 all:
@@ -10,13 +10,13 @@ ifdef FORKWORK
 else
 	ln -s ForkNo.ml ForkMaybe.ml
 endif
-	ocamlbuild $(OCAMLBUILDFLAGS) PhyloCSF.native
+	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) PhyloCSF.native
 
 test: testexe
 	./test.native -verbose
 
 testexe: all
-	ocamlbuild $(OCAMLBUILDFLAGS) testSim.native test.native
+	ocamlbuild -use-ocamlfind $(OCAMLBUILDFLAGS) testSim.native test.native
 
 clean:
 	rm -f *~
